@@ -1,0 +1,24 @@
+version: '3.7'
+
+services:
+
+  auth_db:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    restart: on-failure
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_auth_root_secert
+      MYSQL_USER: auth
+      MYSQL_PASSWORD_FILE: /run/secrets/db_auth_user_secert
+      MYSQL_DATABASE: auth
+    ports:
+      - "15345:3306"
+    secrets:
+      - db_auth_root_secert
+      - db_auth_user_secert
+
+secrets:
+  db_auth_root_secert:
+    file: ../configs/docker_secrets/db_root_secert.txt
+  db_auth_user_secert:
+    file: ../configs/docker_secrets/db_user_secret.txt
