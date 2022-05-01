@@ -1,7 +1,7 @@
 package main
 
 import (
-	"backend/api/gateway"
+	"backend/api/gateway/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,6 +11,9 @@ const (
 
 func main() {
 	r := gin.Default()
-	r.GET(Auth, gateway.IsAuth)
-	r.Run(":10321")
+	r.GET(Auth, auth.IsAuth)
+	err := r.Run(":10321")
+	if err != nil {
+		panic(err)
+	}
 }

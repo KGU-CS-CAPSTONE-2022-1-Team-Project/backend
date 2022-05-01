@@ -54,7 +54,7 @@ func TestCreateUser(t *testing.T) {
 	}()
 	err := userDB.Create()
 	require.Nil(t, err, "생성 실패")
-	result, err := userDB.ReadByID()
+	result, err := userDB.Read()
 	require.Nil(t, err, "조회 실패")
 	assert.Equal(t, user.Email, result.Email, "잘못된 입력")
 }
@@ -78,7 +78,7 @@ func TestAccessToken(t *testing.T) {
 	}()
 	err = userDB.Create()
 	require.Nil(t, err, "생성 실패")
-	user, err := userDB.ReadByID()
+	user, err := userDB.Read()
 	src := auth.AccessToken{
 		UserID:         user.ID,
 		StandardClaims: jwt.StandardClaims{Id: tokenID},
@@ -86,8 +86,8 @@ func TestAccessToken(t *testing.T) {
 	accessTokenString, err := auth.CreateTokenString(&src)
 	assert.Nil(t, err, "생성 실패", err)
 	dst := auth.AccessToken{}
-	err = auth.GetAuthInfo(&dst, accessTokenString)
-	require.Nil(t, err, "파싱 실패", err)
+	err = auth.Validate(&dst, accessTokenString)
+	assert.Nil(t, err, "정상토큰을 오류로 인식", err, errors.Cause(err))
 	assert.True(t, reflect.DeepEqual(src, dst), "같은 토큰이나 서로 다른정보로 인식")
 
 	// Fail cases
@@ -139,7 +139,7 @@ func TestRefreshToken(t *testing.T) {
 	}()
 	err = userDB.Create()
 	require.Nil(t, err, "생성 실패")
-	user, err := userDB.ReadByID()
+	user, err := userDB.Read()
 	accessToken := auth.AccessToken{
 		UserID:         user.ID,
 		StandardClaims: jwt.StandardClaims{Id: tokenID},
@@ -184,7 +184,9 @@ func TestRefreshToken(t *testing.T) {
 		SignedString([]byte(tokenSecret))
 	err = auth.Validate(&refreshToken, tokenSecret)
 	assert.NotNil(t, err, "만료된 토큰")
-
+	accessToken = auth.AccessToken{UserID: uuid.NewString()}
+	accessTokenString, err = auth.CreateTokenString(&accessToken)
+	require.Nil(t, err, "가짜 accessToken생성 실패")
 	hasNotDBToken := auth.RefreshToken{
 		AccessTokenString: accessTokenString,
 		StandardClaims:    jwt.StandardClaims{Id: "123"},

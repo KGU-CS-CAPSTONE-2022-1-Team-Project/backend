@@ -16,7 +16,7 @@ func init() {
 	if !viper.IsSet("token_secert") {
 		viper.SetConfigName("client_secret")
 		viper.SetConfigType("json")
-		viper.AddConfigPath("../configs/auth")
+		viper.AddConfigPath("configs/auth")
 		if err := viper.ReadInConfig(); err != nil {
 			panic(fmt.Errorf("viper error: %v", err))
 		}
@@ -84,7 +84,7 @@ func (r *AccessToken) validate(tokenString string) error {
 			ID:              r.UserID,
 			TokenIdentifier: r.Id,
 		}
-		if _, err := user.ReadByTokenID(r.Id); err != nil {
+		if _, err := user.Read(); err != nil {
 			return nil, errors.Wrap(err, "db 조회 실패")
 		}
 		return []byte(tokenSecret), nil
@@ -114,7 +114,7 @@ func (r *RefreshToken) validate(tokenString string) error {
 			ID: accessToken.UserID,
 		}
 
-		if _, err = user.ReadByTokenID(r.Id); err != nil {
+		if _, err = user.Read(); err != nil {
 			return nil, errors.Wrap(err, "db 조회 실패")
 		}
 		return []byte(tokenSecret), nil
