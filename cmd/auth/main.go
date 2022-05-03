@@ -9,6 +9,7 @@ const (
 	GOOGLE_AUTH          = "/auth/google"
 	GOOGLE_AUTH_CALLBACK = "/auth/google/callback"
 	REFRESH_TOKEN        = "/auth/refresh"
+	ORGIN                = "/auth/authorship/youtuber"
 )
 
 func main() {
@@ -16,6 +17,7 @@ func main() {
 	r.POST(GOOGLE_AUTH, auth.CheckUser, auth.RequestAuth)
 	r.GET(GOOGLE_AUTH_CALLBACK, auth.GetTokenByGoogleServer, auth.RegisterUser, auth.CreateToken)
 	r.PATCH(REFRESH_TOKEN, auth.CheckRefresh, auth.CreateToken)
+	r.POST(ORGIN, auth.CheckUser)
 	err := r.Run(":8000")
 	if err != nil {
 		panic(err)

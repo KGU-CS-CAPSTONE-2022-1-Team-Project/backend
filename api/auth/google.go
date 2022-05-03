@@ -111,7 +111,7 @@ func CheckRefresh(ctx *gin.Context) {
 func RequestAuth(ctx *gin.Context) {
 	url := config.AuthCodeURL(
 		ctx.ClientIP(),
-		oauth2.AccessTypeOffline,
+		oauth2.AccessTypeOnline,
 	)
 	ctx.JSON(http.StatusTemporaryRedirect,
 		Response{

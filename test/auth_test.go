@@ -3,6 +3,10 @@ package test
 import (
 	"backend/internal/auth"
 	"backend/internal/auth/dao"
+	"backend/internal/auth/youtuber"
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
@@ -10,8 +14,13 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
+	"google.golang.org/api/youtube/v3"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -20,10 +29,9 @@ import (
 var tokenSecret string
 
 func init() {
-	viper.SetConfigName("client_secret")
+	viper.SetConfigName("test_secret")
 	viper.SetConfigType("json")
-	viper.SetConfigType("")
-	viper.AddConfigPath("configs/auth")
+	viper.AddConfigPath("../configs/auth")
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("viper error: %v", err))
 	}
@@ -195,4 +203,108 @@ func TestRefreshToken(t *testing.T) {
 	require.Nil(t, err, "토큰 생성 실패", err, errors.Cause(err))
 	err = auth.Validate(&hasNotDBToken, refreshTokenString)
 	assert.NotNil(t, err, "db에 존재하지 않는 토큰")
+}
+
+func TestYoutubeApi(t *testing.T) {
+	require.True(t, viper.IsSet("web"), "설정 조회 실패")
+	require.True(t, viper.IsSet("access_token"), "테스트용 설정파일 조회 실패")
+	require.True(t, viper.IsSet("refresh_token"), "테스트용 설정파일 조회 실패")
+	infoAuth := viper.GetStringMapStringSlice("web")
+	config := &oauth2.Config{
+		ClientID:     infoAuth["client_id"][0],
+		ClientSecret: infoAuth["client_secret"][0],
+		RedirectURL:  infoAuth["redirect_uris"][0],
+		Scopes:       infoAuth["scopes"],
+		Endpoint:     google.Endpoint,
+	}
+	token := oauth2.Token{
+		AccessToken:  viper.GetString("access_token"),
+		TokenType:    "Bearer",
+		RefreshToken: viper.GetString("refresh_token"),
+	}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+	source := config.TokenSource(ctx, &token)
+	youtubeService, err := youtube.NewService(ctx, option.WithTokenSource(source))
+	require.Nil(t, err, "유튜브 서비스에러", err)
+	result, err := youtubeService.Channels.List(
+		[]string{"auditDetails", "statistics", "snippet"},
+	).Mine(true).Do()
+	require.Nil(t, err, "유튜브 채널 api에러", err)
+	assert.Equal(t, len(result.Items), 1, "1개 초과 혹은0개의 결과값", len(result.Items))
+}
+
+func TestValidateYoutuber(t *testing.T) {
+	validateMock := youtube.Channel{
+		AuditDetails: &youtube.ChannelAuditDetails{
+			CommunityGuidelinesGoodStanding: true,
+			ContentIdClaimsGoodStanding:     true,
+			CopyrightStrikesGoodStanding:    true,
+		},
+		ContentOwnerDetails: &youtube.ChannelContentOwnerDetails{
+			ContentOwner: "owner",
+			TimeLinked:   "time",
+		},
+		ConversionPings: nil,
+		Statistics: &youtube.ChannelStatistics{
+			CommentCount:          youtuber.MinCommentCount,
+			HiddenSubscriberCount: false,
+			SubscriberCount:       youtuber.MinSubscriber,
+			ViewCount:             youtuber.MinViewerCount,
+			VideoCount:            youtuber.MinVideoCount,
+		},
+	}
+	validateMock.HTTPStatusCode = http.StatusOK
+	err := youtuber.Validate(validateMock)
+	assert.Nil(t, err, "유효한 채널", err)
+	invalidateMocks := [7]youtube.Channel{}
+	for idx := range invalidateMocks {
+		var buffer bytes.Buffer
+		var dst *youtube.Channel
+		encoder := json.NewEncoder(&buffer)
+		decoder := json.NewDecoder(&buffer)
+		err = encoder.Encode(validateMock)
+		require.Nil(t, err, "deep copy준비문제")
+		err = decoder.Decode(&dst)
+		require.Nil(t, err, "deep copy준비문제")
+		invalidateMocks[idx] = *dst
+	}
+	for idx, mock := range invalidateMocks {
+		switch idx {
+		case 0:
+			mock.HTTPStatusCode = http.StatusForbidden
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "권한없음")
+		case 1:
+			mock.HTTPStatusCode = http.StatusBadRequest
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "호출에러: 잘못된 파라미터")
+		case 2:
+			mock.AuditDetails.CopyrightStrikesGoodStanding = false
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "저작권문제가 있는 채널")
+		case 3:
+			mock.ContentOwnerDetails = nil
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "파트너가 아닌 채널")
+		case 4:
+			mock.Statistics.ViewCount = 0
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "조회수 부족")
+		case 5:
+			mock.Statistics.SubscriberCount = 0
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "구독자수 부족")
+		case 6:
+			mock.Statistics.CommentCount = 0
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "댓글수 부족")
+		case 7:
+			mock.Statistics.VideoCount = 0
+			err = youtuber.Validate(mock)
+			assert.NotNil(t, err, "영상 개수 부족")
+
+		}
+	}
+
 }
