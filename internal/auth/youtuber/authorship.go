@@ -3,7 +3,6 @@ package youtuber
 import (
 	"github.com/pkg/errors"
 	"google.golang.org/api/youtube/v3"
-	"net/http"
 )
 
 const (
@@ -13,15 +12,9 @@ const (
 	MinVideoCount   = 20
 )
 
-func Validate(channel youtube.Channel) error {
+func ValidateChannel(channel *youtube.Channel) error {
 	auditDetails := channel.AuditDetails
 	statistic := channel.Statistics
-	if channel.HTTPStatusCode == http.StatusForbidden {
-		return errors.New("권한없음")
-	}
-	if channel.HTTPStatusCode != http.StatusOK {
-		return errors.New("api호출 에러")
-	}
 	if !(auditDetails.CopyrightStrikesGoodStanding &&
 		auditDetails.ContentIdClaimsGoodStanding &&
 		auditDetails.CommunityGuidelinesGoodStanding) {

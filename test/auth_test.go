@@ -38,7 +38,7 @@ func init() {
 	tokenSecret = viper.GetString("token_secert")
 }
 
-func dbconnection() *gorm.DB {
+func dbConnection() *gorm.DB {
 	config := viper.GetStringMapString("db")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		config["user"], config["password"], config["host"], config["port"], config["main_db"])
@@ -57,7 +57,7 @@ func TestCreateUser(t *testing.T) {
 		Email: user.Email,
 	}
 	defer func() {
-		dbconnection().Unscoped().
+		dbConnection().Unscoped().
 			Delete(&userDB)
 	}()
 	err := userDB.Create()
@@ -81,7 +81,7 @@ func TestAccessToken(t *testing.T) {
 		TokenIdentifier: tokenID,
 	}
 	defer func() {
-		dbconnection().Unscoped().
+		dbConnection().Unscoped().
 			Delete(&userDB)
 	}()
 	err = userDB.Create()
@@ -142,7 +142,7 @@ func TestRefreshToken(t *testing.T) {
 		TokenIdentifier: tokenID,
 	}
 	defer func() {
-		dbconnection().Unscoped().
+		dbConnection().Unscoped().
 			Delete(&userDB)
 	}()
 	err = userDB.Create()
@@ -255,9 +255,9 @@ func TestValidateYoutuber(t *testing.T) {
 		},
 	}
 	validateMock.HTTPStatusCode = http.StatusOK
-	err := youtuber.Validate(validateMock)
+	err := youtuber.ValidateChannel(&validateMock)
 	assert.Nil(t, err, "유효한 채널", err)
-	invalidateMocks := [7]youtube.Channel{}
+	invalidateMocks := [6]youtube.Channel{}
 	for idx := range invalidateMocks {
 		var buffer bytes.Buffer
 		var dst *youtube.Channel
@@ -272,39 +272,29 @@ func TestValidateYoutuber(t *testing.T) {
 	for idx, mock := range invalidateMocks {
 		switch idx {
 		case 0:
-			mock.HTTPStatusCode = http.StatusForbidden
-			err = youtuber.Validate(mock)
-			assert.NotNil(t, err, "권한없음")
-		case 1:
-			mock.HTTPStatusCode = http.StatusBadRequest
-			err = youtuber.Validate(mock)
-			assert.NotNil(t, err, "호출에러: 잘못된 파라미터")
-		case 2:
 			mock.AuditDetails.CopyrightStrikesGoodStanding = false
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "저작권문제가 있는 채널")
-		case 3:
+		case 1:
 			mock.ContentOwnerDetails = nil
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "파트너가 아닌 채널")
-		case 4:
+		case 2:
 			mock.Statistics.ViewCount = 0
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "조회수 부족")
-		case 5:
+		case 3:
 			mock.Statistics.SubscriberCount = 0
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "구독자수 부족")
-		case 6:
+		case 4:
 			mock.Statistics.CommentCount = 0
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "댓글수 부족")
-		case 7:
+		case 5:
 			mock.Statistics.VideoCount = 0
-			err = youtuber.Validate(mock)
+			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "영상 개수 부족")
-
 		}
 	}
-
 }

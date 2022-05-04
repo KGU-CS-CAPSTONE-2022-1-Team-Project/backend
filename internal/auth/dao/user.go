@@ -13,6 +13,7 @@ type User struct {
 	IsAuthedStreamer bool   `gorm:"not_null"`
 	AccessToken      string
 	RefreshToken     string
+	Address          string
 	gorm.Model
 }
 

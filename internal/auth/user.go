@@ -9,15 +9,7 @@ type User struct {
 	IsAuthedStreamer bool
 	AccessToken      string
 	RefreshToken     string
-}
-
-func UserDB2User(user dao.User) User {
-	return User{
-		ID:               user.ID,
-		Email:            user.Email,
-		TokenIdentifier:  user.TokenIdentifier,
-		IsAuthedStreamer: user.IsAuthedStreamer,
-	}
+	Address          string
 }
 
 func User2UserDB(user User) dao.User {

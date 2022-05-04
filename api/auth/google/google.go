@@ -1,4 +1,4 @@
-package auth
+package google
 
 import (
 	"backend/internal/auth"
@@ -30,7 +30,11 @@ type RequestRefresh struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-var config *oauth2.Config
+type holderAddress struct {
+	Address string `json:"address"`
+}
+
+var Config *oauth2.Config
 
 func init() {
 	if !viper.IsSet("web") {
@@ -42,7 +46,7 @@ func init() {
 		}
 	}
 	infoAuth := viper.GetStringMapStringSlice("web")
-	config = &oauth2.Config{
+	Config = &oauth2.Config{
 		ClientID:     infoAuth["client_id"][0],
 		ClientSecret: infoAuth["client_secret"][0],
 		RedirectURL:  infoAuth["redirect_uris"][0],
@@ -52,7 +56,7 @@ func init() {
 }
 
 func getGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) {
-	source := config.TokenSource(ctx, token)
+	source := Config.TokenSource(ctx, token)
 	client, err := userProfile.NewService(ctx, option.WithTokenSource(source))
 	userInfo, err := client.Userinfo.Get().Do()
 	if err != nil {
@@ -61,7 +65,7 @@ func getGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) {
 	return userInfo.Email, nil
 }
 
-func CheckUser(ctx *gin.Context) {
+func CheckNotUser(ctx *gin.Context) {
 	headerAuth := ctx.Request.Header.Get("Authorization")
 	token := strings.TrimPrefix(headerAuth, "Bearer ")
 	if token == "" {
@@ -76,6 +80,24 @@ func CheckUser(ctx *gin.Context) {
 		})
 		return
 	}
+}
+
+func GetUser(ctx *gin.Context) {
+	headerAuth := ctx.Request.Header.Get("Authorization")
+	tokenString := strings.TrimPrefix(headerAuth, "Bearer ")
+	tokenInfo := auth.AccessToken{}
+	err := auth.GetAuthInfo(&tokenInfo, tokenString)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "파싱 실패"})
+		return
+	}
+	tmp := dao.User{ID: tokenInfo.UserID, TokenIdentifier: tokenInfo.Id}
+	user, err := tmp.Read()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "db조회 실패"})
+		return
+	}
+	ctx.Set("user", user)
 }
 
 func CheckRefresh(ctx *gin.Context) {
@@ -109,9 +131,9 @@ func CheckRefresh(ctx *gin.Context) {
 }
 
 func RequestAuth(ctx *gin.Context) {
-	url := config.AuthCodeURL(
+	url := Config.AuthCodeURL(
 		ctx.ClientIP(),
-		oauth2.AccessTypeOnline,
+		oauth2.AccessTypeOffline,
 	)
 	ctx.JSON(http.StatusTemporaryRedirect,
 		Response{
@@ -124,7 +146,7 @@ func GetTokenByGoogleServer(ctx *gin.Context) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	code := ctx.Query("code")
-	token, err := config.Exchange(ctxTimeout, code)
+	token, err := Config.Exchange(ctxTimeout, code)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
 			Message: "exchange실패",
@@ -133,6 +155,7 @@ func GetTokenByGoogleServer(ctx *gin.Context) {
 	}
 	ctx.Set("token", token)
 }
+
 func RegisterUser(ctx *gin.Context) {
 	tokenType, _ := ctx.Get("token")
 	token := tokenType.(*oauth2.Token)
@@ -219,4 +242,32 @@ func CreateToken(ctx *gin.Context) {
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 	})
+}
+
+func UpdateAddress(ctx *gin.Context) {
+	tmp, exist := ctx.Get("user")
+	if !exist {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "유저정보교환 실패"})
+		return
+	}
+	user := tmp.(*dao.User)
+	if !user.IsAuthedStreamer {
+		ctx.AbortWithStatusJSON(http.StatusForbidden, Response{
+			Message: "미인증된 채널",
+		})
+		return
+	}
+	holder := &holderAddress{}
+	err := ctx.BindJSON(holder)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, Response{Message: "잘못된 파라미터"})
+		return
+	}
+	user.Address = holder.Address
+	err = user.Save()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "업데이트 실패"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Response{Message: "성공"})
 }
