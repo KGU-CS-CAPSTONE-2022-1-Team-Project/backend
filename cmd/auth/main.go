@@ -1,21 +1,26 @@
 package main
 
 import (
-	"backend/api/auth"
+	"backend/api/auth/google"
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	GOOGLE_AUTH          = "/auth/google"
-	GOOGLE_AUTH_CALLBACK = "/auth/google/callback"
-	REFRESH_TOKEN        = "/auth/refresh"
+	GoogleAuth         = "/auth/google"
+	GoogleAuthCallback = "/auth/google/callback"
+	Refresh            = "/auth/refresh"
+	Youtuber           = "/auth/authorship/youtuber"
+	Address            = "/auth/authorship/youtuber/address"
 )
 
 func main() {
 	r := gin.Default()
-	r.POST(GOOGLE_AUTH, auth.CheckUser, auth.RequestAuth)
-	r.GET(GOOGLE_AUTH_CALLBACK, auth.GetTokenByGoogleServer, auth.RegisterUser, auth.CreateToken)
-	r.PATCH(REFRESH_TOKEN, auth.CheckRefresh, auth.CreateToken)
+	r.POST(GoogleAuth, google.CheckNotUser, google.RequestAuth)
+	r.GET(GoogleAuthCallback, google.GetTokenByGoogleServer, google.RegisterUser, google.CreateToken)
+	r.PATCH(Refresh, google.CheckRefresh, google.CreateToken)
+	r.PUT(Youtuber, google.GetUser, google.ISYoutuber)
+	r.PUT(Address, google.GetUser, google.UpdateAddress)
+
 	err := r.Run(":8000")
 	if err != nil {
 		panic(err)
