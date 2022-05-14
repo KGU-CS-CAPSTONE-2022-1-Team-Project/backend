@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"backend/internal/auth/dao"
+	"backend/infrastructure/auth/dao"
 	"crypto/rand"
 	"fmt"
 	"github.com/golang-jwt/jwt"

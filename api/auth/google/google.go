@@ -1,8 +1,8 @@
 package google
 
 import (
+	"backend/infrastructure/auth/dao"
 	"backend/internal/auth"
-	"backend/internal/auth/dao"
 	"context"
 	"errors"
 	"fmt"
