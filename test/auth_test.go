@@ -1,8 +1,8 @@
 package test
 
 import (
+	"backend/infrastructure/auth/dao"
 	"backend/internal/auth"
-	"backend/internal/auth/dao"
 	"backend/internal/auth/youtuber"
 	"bytes"
 	"context"

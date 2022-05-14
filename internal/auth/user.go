@@ -1,6 +1,8 @@
 package auth
 
-import "backend/internal/auth/dao"
+import (
+	"backend/infrastructure/auth/dao"
+)
 
 type User struct {
 	ID               string

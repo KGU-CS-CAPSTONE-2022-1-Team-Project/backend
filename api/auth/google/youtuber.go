@@ -1,7 +1,7 @@
 package google
 
 import (
-	"backend/internal/auth/dao"
+	"backend/infrastructure/auth/dao"
 	"backend/internal/auth/youtuber"
 	"context"
 	"github.com/gin-gonic/gin"
