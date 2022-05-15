@@ -39,6 +39,7 @@ func IsAuth(ctx *gin.Context) {
 			"message": "validate",
 		})
 	default:
-		ctx.JSON(http.StatusInternalServerError, result)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, result)
+		return
 	}
 }

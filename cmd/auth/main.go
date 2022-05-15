@@ -8,7 +8,6 @@ import (
 const (
 	GoogleAuth         = "/auth/google"
 	GoogleAuthCallback = "/auth/google/callback"
-	Refresh            = "/auth/refresh"
 	Youtuber           = "/auth/authorship/youtuber"
 	Address            = "/auth/authorship/youtuber/address"
 )
@@ -17,7 +16,7 @@ func main() {
 	r := gin.Default()
 	r.POST(GoogleAuth, google.CheckNotUser, google.RequestAuth)
 	r.GET(GoogleAuthCallback, google.GetTokenByGoogleServer, google.RegisterUser, google.CreateToken)
-	r.PATCH(Refresh, google.CheckRefresh, google.CreateToken)
+
 	r.PUT(Youtuber, google.GetUser, google.ISYoutuber)
 	r.PUT(Address, google.GetUser, google.UpdateAddress)
 
