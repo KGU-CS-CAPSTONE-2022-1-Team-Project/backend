@@ -1,8 +1,8 @@
 package google
 
 import (
-	"backend/infrastructure/auth/dao"
-	"backend/internal/auth"
+	"backend/infrastructure/owner/dao"
+	"backend/internal/owner"
 	"context"
 	"errors"
 	"fmt"
@@ -40,7 +40,7 @@ func init() {
 	if !viper.IsSet("web") {
 		viper.SetConfigName("client_secret")
 		viper.SetConfigType("json")
-		viper.AddConfigPath("./configs/auth")
+		viper.AddConfigPath("./configs/owner")
 		if err := viper.ReadInConfig(); err != nil {
 			panic(fmt.Errorf("viper error: %v", err))
 		}
@@ -72,8 +72,8 @@ func CheckNotUser(ctx *gin.Context) {
 		ctx.Next()
 		return
 	}
-	accessToken := auth.AccessToken{}
-	err := auth.Validate(&accessToken, token)
+	accessToken := owner.AccessToken{}
+	err := owner.Validate(&accessToken, token)
 	if err == nil {
 		ctx.AbortWithStatusJSON(http.StatusOK, Response{
 			Message: "success",
@@ -85,49 +85,19 @@ func CheckNotUser(ctx *gin.Context) {
 func GetUser(ctx *gin.Context) {
 	headerAuth := ctx.Request.Header.Get("Authorization")
 	tokenString := strings.TrimPrefix(headerAuth, "Bearer ")
-	tokenInfo := auth.AccessToken{}
-	err := auth.GetAuthInfo(&tokenInfo, tokenString)
+	tokenInfo := owner.AccessToken{}
+	err := owner.GetAuthInfo(&tokenInfo, tokenString)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "파싱 실패"})
 		return
 	}
-	tmp := dao.User{ID: tokenInfo.UserID, TokenIdentifier: tokenInfo.Id}
+	tmp := dao.User{ID: tokenInfo.UserID}
 	user, err := tmp.Read()
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "db조회 실패"})
 		return
 	}
 	ctx.Set("user", user)
-}
-
-func CheckRefresh(ctx *gin.Context) {
-	requsetInfo := RequestRefresh{}
-	err := ctx.BindJSON(&requsetInfo)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, Response{Message: "파라미터 조회 실패"})
-		return
-	}
-	refreshToken := auth.RefreshToken{}
-	err = auth.Validate(&refreshToken, requsetInfo.RefreshToken)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, Response{
-			Message: "유효하지 않는 토큰",
-		})
-	}
-	accessToken := auth.AccessToken{}
-	err = auth.GetAuthInfo(&accessToken, refreshToken.AccessTokenString)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
-			Message: "만료되었으면서",
-		})
-	}
-	searchValues := dao.User{ID: accessToken.UserID}
-	userDB, err := searchValues.Read()
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
-			Message: "관리자에게 문의하세요"})
-	}
-	ctx.Set("userDB", *userDB)
 }
 
 func RequestAuth(ctx *gin.Context) {
@@ -165,24 +135,17 @@ func RegisterUser(ctx *gin.Context) {
 	if err != nil || email == "" {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, Response{Message: "이메일 권한 필요"})
 	}
-
-	tokenID, err := auth.MakeTokenId()
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "토큰id생성실패"})
+	user := owner.User{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		Email:        email,
 	}
-	user := auth.User{
-		TokenIdentifier: tokenID,
-		AccessToken:     token.AccessToken,
-		RefreshToken:    token.RefreshToken,
-		Email:           email,
-	}
-	hasEmail := auth.User2UserDB(auth.User{Email: email})
+	hasEmail := owner.User2UserDB(owner.User{Email: email})
 	result, err := hasEmail.Read()
 	var userDB dao.User
 	if err == nil {
 		result.AccessToken = token.AccessToken
 		result.RefreshToken = token.RefreshToken
-		result.TokenIdentifier = tokenID
 		err = result.Save()
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
@@ -191,7 +154,7 @@ func RegisterUser(ctx *gin.Context) {
 		}
 		userDB = *result
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		userDB = auth.User2UserDB(user)
+		userDB = owner.User2UserDB(user)
 		err = userDB.Create()
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
@@ -218,18 +181,11 @@ func CreateToken(ctx *gin.Context) {
 		return
 	}
 	userDB := value.(dao.User)
-	accessToken := auth.AccessToken{
+	accessToken := owner.AccessToken{
 		UserID:         userDB.ID,
-		StandardClaims: jwt.StandardClaims{Id: userDB.TokenIdentifier},
+		StandardClaims: jwt.StandardClaims{},
 	}
-	accessTokenString, err := auth.CreateTokenString(&accessToken)
-	refreshToken := auth.RefreshToken{
-		AccessTokenString: accessTokenString,
-		StandardClaims: jwt.StandardClaims{
-			Id: accessToken.Id,
-		},
-	}
-	refreshTokenString, err := auth.CreateTokenString(&refreshToken)
+	accessTokenString, err := owner.CreateTokenString(&accessToken)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError,
 			Response{
@@ -238,9 +194,8 @@ func CreateToken(ctx *gin.Context) {
 		return
 	}
 	ctx.AbortWithStatusJSON(http.StatusOK, Response{
-		Message:      "success",
-		AccessToken:  accessTokenString,
-		RefreshToken: refreshTokenString,
+		Message:     "success",
+		AccessToken: accessTokenString,
 	})
 }
 

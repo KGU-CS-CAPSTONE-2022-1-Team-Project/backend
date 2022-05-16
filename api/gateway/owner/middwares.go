@@ -1,4 +1,4 @@
-package auth
+package owner
 
 import (
 	"encoding/json"
@@ -17,7 +17,9 @@ type ResultAuth struct {
 func IsAuth(ctx *gin.Context) {
 	result := &ResultAuth{}
 	client := resty.New()
-	httpInfo, err := client.R().SetHeader("Authorization", ctx.Request.Header.Get("Authorization")).Post("http://localhost:8000/auth/google")
+	httpInfo, err := client.R().SetHeader("Authorization",
+		ctx.Request.Header.Get("Authorization")).
+		Post("http://localhost:8000/auth/google")
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"message": "인증 서버 에러",

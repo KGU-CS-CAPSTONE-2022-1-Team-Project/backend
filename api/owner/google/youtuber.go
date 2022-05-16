@@ -1,8 +1,8 @@
 package google
 
 import (
-	"backend/infrastructure/auth/dao"
-	"backend/internal/auth/youtuber"
+	"backend/infrastructure/owner/dao"
+	"backend/internal/owner/youtuber"
 	"context"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
@@ -51,4 +51,16 @@ func ISYoutuber(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, Response{Message: "성공"})
+	ctx.Set("youtube", result.Items[0])
+}
+
+func SetChannel(ctx *gin.Context) {
+	tmp, _ := ctx.Get("youtube")
+	channel := tmp.(*youtube.Channel)
+	tmp, _ = ctx.Get("user")
+	user := tmp.(*dao.User)
+	user.Channel.Name = channel.Snippet.Title
+	user.Channel.Description = channel.Snippet.Description
+	user.Channel.URL = channel.Snippet.Thumbnails.Default.Url
+	user.Save()
 }

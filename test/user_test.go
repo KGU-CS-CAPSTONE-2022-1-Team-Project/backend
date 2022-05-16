@@ -1,9 +1,9 @@
 package test
 
 import (
-	"backend/infrastructure/auth/dao"
-	"backend/internal/auth"
-	"backend/internal/auth/youtuber"
+	"backend/infrastructure/owner/dao"
+	"backend/internal/owner"
+	"backend/internal/owner/youtuber"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -31,7 +31,7 @@ var tokenSecret string
 func init() {
 	viper.SetConfigName("test_secret")
 	viper.SetConfigType("json")
-	viper.AddConfigPath("../configs/auth")
+	viper.AddConfigPath("../configs/owner")
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("viper error: %v", err))
 	}
@@ -50,11 +50,11 @@ func dbConnection() *gorm.DB {
 }
 
 func TestCreateUser(t *testing.T) {
-	user := auth.User{
+	mock := owner.User{
 		Email: "test@test.com",
 	}
 	userDB := dao.User{
-		Email: user.Email,
+		Email: mock.Email,
 	}
 	defer func() {
 		dbConnection().Unscoped().
@@ -64,7 +64,7 @@ func TestCreateUser(t *testing.T) {
 	require.Nil(t, err, "생성 실패")
 	result, err := userDB.Read()
 	require.Nil(t, err, "조회 실패")
-	assert.Equal(t, user.Email, result.Email, "잘못된 입력")
+	assert.Equal(t, mock.Email, result.Email, "잘못된 입력")
 }
 
 func TestMigration(t *testing.T) {
@@ -74,55 +74,50 @@ func TestMigration(t *testing.T) {
 }
 
 func TestAccessToken(t *testing.T) {
-	tokenID, err := auth.MakeTokenId()
-	require.Nil(t, err, "토큰id생성실패")
 	userDB := dao.User{
-		Email:           "test@test.com",
-		TokenIdentifier: tokenID,
+		Email: "test@test.com",
 	}
 	defer func() {
 		dbConnection().Unscoped().
 			Delete(&userDB)
 	}()
-	err = userDB.Create()
+	err := userDB.Create()
 	require.Nil(t, err, "생성 실패")
-	user, err := userDB.Read()
-	src := auth.AccessToken{
-		UserID:         user.ID,
-		StandardClaims: jwt.StandardClaims{Id: tokenID},
+	result, err := userDB.Read()
+	src := owner.AccessToken{
+		UserID:         result.ID,
+		StandardClaims: jwt.StandardClaims{},
 	}
-	accessTokenString, err := auth.CreateTokenString(&src)
+	accessTokenString, err := owner.CreateTokenString(&src)
 	assert.Nil(t, err, "생성 실패", err)
-	dst := auth.AccessToken{}
-	err = auth.Validate(&dst, accessTokenString)
+	dst := owner.AccessToken{}
+	err = owner.Validate(&dst, accessTokenString)
 	assert.Nil(t, err, "정상토큰을 오류로 인식", err, errors.Cause(err))
 	assert.True(t, reflect.DeepEqual(src, dst), "같은 토큰이나 서로 다른정보로 인식")
 
 	// Fail cases
-	notFoundUUIDToken := auth.AccessToken{
+	notFoundUUIDToken := owner.AccessToken{
 		UserID:         uuid.NewString(),
 		StandardClaims: jwt.StandardClaims{},
 	}
-	err = auth.Validate(&dst, accessTokenString)
+	err = owner.Validate(&dst, accessTokenString)
 	assert.Nil(t, err, "정상토큰을 검증실패", "에러내용: ", err)
-	accessTokenString, _ = auth.CreateTokenString(&notFoundUUIDToken)
-	err = auth.Validate(&notFoundUUIDToken, accessTokenString)
+	accessTokenString, _ = owner.CreateTokenString(&notFoundUUIDToken)
+	err = owner.Validate(&notFoundUUIDToken, accessTokenString)
 	assert.NotNil(t, err, "db에 존재하지 않는 토큰")
-	expiredToken := auth.AccessToken{
-		UserID: user.ID,
+	expiredToken := owner.AccessToken{
+		UserID: result.ID,
 		StandardClaims: jwt.StandardClaims{
-			Id:        tokenID,
 			ExpiresAt: time.Now().Add(-10 * time.Second).Unix(),
 		},
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, &expiredToken)
 	accessTokenString, _ = at.SignedString([]byte(tokenSecret))
-	err = auth.Validate(&notFoundUUIDToken, accessTokenString)
+	err = owner.Validate(&notFoundUUIDToken, accessTokenString)
 	assert.NotNil(t, err, "만료된 토큰")
-	wrongAlgorithmToken := auth.AccessToken{
-		UserID: user.ID,
+	wrongAlgorithmToken := owner.AccessToken{
+		UserID: result.ID,
 		StandardClaims: jwt.StandardClaims{
-			Id:        tokenID,
 			ExpiresAt: time.Now().UTC().Add(1 * time.Hour).Unix(),
 			IssuedAt:  time.Now().UTC().Unix(),
 		},
@@ -130,7 +125,7 @@ func TestAccessToken(t *testing.T) {
 	at = jwt.NewWithClaims(jwt.SigningMethodHS384, &wrongAlgorithmToken)
 	accessTokenString, err = at.SignedString([]byte(tokenSecret))
 	require.Nil(t, err, "다른알고리즘생성실패")
-	err = auth.Validate(&wrongAlgorithmToken, accessTokenString)
+	err = owner.Validate(&wrongAlgorithmToken, accessTokenString)
 	assert.NotNil(t, err, "잘못된 알고리즘 통과")
 }
 

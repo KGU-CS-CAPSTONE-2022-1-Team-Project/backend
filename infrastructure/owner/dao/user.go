@@ -9,12 +9,27 @@ import (
 type User struct {
 	ID               string `gorm:"primaryKey'"`
 	Email            string `gorm:"not_null"`
-	TokenIdentifier  string `gorm:"not_null"`
 	IsAuthedStreamer bool   `gorm:"not_null"`
 	AccessToken      string
 	RefreshToken     string
 	Address          string
+	Channel
 	gorm.Model
+}
+
+type Channel struct {
+	Name        string
+	Description string
+	image       string
+	URL         string
+}
+
+func init() {
+	user := User{}
+	err := user.Migration()
+	if err != nil {
+		panic("Fail migration")
+	}
 }
 
 // BeforeCreate is gorm Hook. plz not call.
@@ -61,11 +76,7 @@ func (receiver *User) Read() (*User, error) {
 		return nil, err
 	}
 	if receiver.ID != "" {
-		if receiver.TokenIdentifier != "" {
-			return receiver.readByTokenID(db)
-		} else {
-			return receiver.readByUserID(db)
-		}
+		return receiver.readByUserID(db)
 	}
 	if receiver.Email != "" {
 		return receiver.readByEmail(db)
@@ -76,12 +87,6 @@ func (receiver *User) Read() (*User, error) {
 func (receiver *User) readByUserID(conn *gorm.DB) (*User, error) {
 	result := &User{}
 	return result, conn.First(&result, "id", receiver.ID).Error
-}
-
-func (receiver *User) readByTokenID(conn *gorm.DB) (*User, error) {
-	result := &User{}
-	return result, conn.First(&result, "id=? AND token_identifier=?",
-		receiver.ID, receiver.TokenIdentifier).Error
 }
 
 func (receiver *User) readByEmail(conn *gorm.DB) (*User, error) {

@@ -1,8 +1,7 @@
-package auth
+package owner
 
 import (
-	"backend/infrastructure/auth/dao"
-	"crypto/rand"
+	"backend/infrastructure/owner/dao"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
@@ -16,7 +15,7 @@ func init() {
 	if !viper.IsSet("token_secert") {
 		viper.SetConfigName("client_secret")
 		viper.SetConfigType("json")
-		viper.AddConfigPath("configs/auth")
+		viper.AddConfigPath("configs/owner")
 		if err := viper.ReadInConfig(); err != nil {
 			panic(fmt.Errorf("viper error: %v", err))
 		}
@@ -42,23 +41,6 @@ func GetAuthInfo(t Token, tokenString string) error {
 	return t.parser(tokenString)
 }
 
-const otpChars = "0123456789"
-
-// MakeTokenId
-// Reference: https://stackoverflow.com/questions/39481826/generate-6-digit-verification-code-with-golang
-func MakeTokenId() (string, error) {
-	buffer := make([]byte, 9)
-	_, err := rand.Read(buffer)
-	if err != nil {
-		return "", errors.Wrap(err, "tokenId생성 시")
-	}
-	otpCharsLength := len(otpChars)
-	for i := 0; i < 9; i++ {
-		buffer[i] = otpChars[int(buffer[i])%otpCharsLength]
-	}
-	return string(buffer), nil
-}
-
 type AccessToken struct {
 	UserID string `json:"UserID"`
 	jwt.StandardClaims
@@ -76,8 +58,7 @@ func (r *AccessToken) validate(tokenString string) error {
 		}
 		// 3. db의 데이터와 일치하는지확인
 		user := dao.User{
-			ID:              r.UserID,
-			TokenIdentifier: r.Id,
+			ID: r.UserID,
 		}
 		if _, err := user.Read(); err != nil {
 			return nil, errors.Wrap(err, "db 조회 실패")
