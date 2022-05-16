@@ -20,8 +20,8 @@ type User struct {
 type Channel struct {
 	Name        string
 	Description string
-	image       string
-	URL         string
+	Image       string
+	Url         string
 }
 
 func init() {

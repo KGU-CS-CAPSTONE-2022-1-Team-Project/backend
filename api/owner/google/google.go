@@ -19,19 +19,9 @@ import (
 	"time"
 )
 
-type Response struct {
-	Message      string `json:"message"`
-	AuthUrl      string `json:"auth_url,omitempty"`
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-}
-
-type RequestRefresh struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-type holderAddress struct {
-	Address string `json:"address"`
+type holderBlockchain struct {
+	Address    string `json:"address"`
+	PrivateKey string `json:"private_key"`
 }
 
 var Config *oauth2.Config
@@ -75,7 +65,7 @@ func CheckNotUser(ctx *gin.Context) {
 	accessToken := owner.AccessToken{}
 	err := owner.Validate(&accessToken, token)
 	if err == nil {
-		ctx.AbortWithStatusJSON(http.StatusOK, Response{
+		ctx.AbortWithStatusJSON(http.StatusOK, ResponseCommon{
 			Message: "success",
 		})
 		return
@@ -88,13 +78,13 @@ func GetUser(ctx *gin.Context) {
 	tokenInfo := owner.AccessToken{}
 	err := owner.GetAuthInfo(&tokenInfo, tokenString)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "파싱 실패"})
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "파싱 실패"})
 		return
 	}
 	tmp := dao.User{ID: tokenInfo.UserID}
 	user, err := tmp.Read()
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "db조회 실패"})
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "db조회 실패"})
 		return
 	}
 	ctx.Set("user", user)
@@ -106,7 +96,7 @@ func RequestAuth(ctx *gin.Context) {
 		oauth2.AccessTypeOffline,
 	)
 	ctx.JSON(http.StatusTemporaryRedirect,
-		Response{
+		ResponseAuth{
 			Message: "인증 필요",
 			AuthUrl: url,
 		})
@@ -118,7 +108,7 @@ func GetTokenByGoogleServer(ctx *gin.Context) {
 	code := ctx.Query("code")
 	token, err := Config.Exchange(ctxTimeout, code)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
 			Message: "exchange실패",
 		})
 		return
@@ -133,7 +123,7 @@ func RegisterUser(ctx *gin.Context) {
 	defer cancel()
 	email, err := getGoogleEmail(ctxTimeout, token)
 	if err != nil || email == "" {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, Response{Message: "이메일 권한 필요"})
+		ctx.AbortWithStatusJSON(http.StatusNotFound, ResponseCommon{Message: "이메일 권한 필요"})
 	}
 	user := owner.User{
 		AccessToken:  token.AccessToken,
@@ -149,7 +139,7 @@ func RegisterUser(ctx *gin.Context) {
 		err = result.Save()
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-				Response{Message: "갱신 실패"})
+				ResponseCommon{Message: "갱신 실패"})
 			return
 		}
 		userDB = *result
@@ -158,13 +148,13 @@ func RegisterUser(ctx *gin.Context) {
 		err = userDB.Create()
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-				Response{
+				ResponseCommon{
 					Message: "DB에러",
 				})
 			return
 		}
 	} else {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
 			Message: "관리자에게 문의해주세요",
 		})
 		return
@@ -175,7 +165,7 @@ func RegisterUser(ctx *gin.Context) {
 func CreateToken(ctx *gin.Context) {
 	value, exist := ctx.Get("userDB")
 	if !exist {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
 			Message: "관리자에게 문의해주세요",
 		})
 		return
@@ -188,12 +178,12 @@ func CreateToken(ctx *gin.Context) {
 	accessTokenString, err := owner.CreateTokenString(&accessToken)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-			Response{
+			ResponseCommon{
 				Message: "관리자에게 문의하세요",
 			})
 		return
 	}
-	ctx.AbortWithStatusJSON(http.StatusOK, Response{
+	ctx.AbortWithStatusJSON(http.StatusOK, ResponseAuth{
 		Message:     "success",
 		AccessToken: accessTokenString,
 	})
@@ -202,27 +192,27 @@ func CreateToken(ctx *gin.Context) {
 func UpdateAddress(ctx *gin.Context) {
 	tmp, exist := ctx.Get("user")
 	if !exist {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "유저정보교환 실패"})
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "유저정보교환 실패"})
 		return
 	}
 	user := tmp.(*dao.User)
 	if !user.IsAuthedStreamer {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, Response{
+		ctx.AbortWithStatusJSON(http.StatusForbidden, ResponseCommon{
 			Message: "미인증된 채널",
 		})
 		return
 	}
-	holder := &holderAddress{}
+	holder := &holderBlockchain{}
 	err := ctx.BindJSON(holder)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, Response{Message: "잘못된 파라미터"})
+	if err != nil || len(holder.Address) != 42 || holder.PrivateKey == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseCommon{Message: "잘못된 파라미터"})
 		return
 	}
 	user.Address = holder.Address
 	err = user.Save()
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Response{Message: "업데이트 실패"})
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "업데이트 실패"})
 		return
 	}
-	ctx.JSON(http.StatusOK, Response{Message: "성공"})
+	ctx.JSON(http.StatusOK, ResponseCommon{Message: "성공"})
 }
