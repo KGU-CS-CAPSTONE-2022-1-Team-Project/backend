@@ -3,7 +3,7 @@ package test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/gochain/gochain/v3/common"
 	"github.com/gochain/web3"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -18,11 +18,11 @@ var privateKey string
 var connectionAddr string
 var nftAbiString string
 var bytecode string
-var nftContractHash string
+var contractAddr common.Address
 
 func init() {
 	if !viper.IsSet("address") || !viper.IsSet("key") || viper.IsSet("connectionAddr") {
-		viper.AddConfigPath("./configs/blockchain")
+		viper.AddConfigPath("./configs/owner/blockchain")
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("test_info")
 		if err := viper.ReadInConfig(); err != nil {
@@ -45,7 +45,6 @@ func init() {
 	}
 	nftAbiString = string(byteArray)
 	bytecode = viper.GetString("bytecode")
-	fmt.Println("test")
 }
 
 func TestNFTContract(t *testing.T) {
@@ -75,22 +74,30 @@ func TestNFTContract(t *testing.T) {
 		}
 	}
 	assert.NotEqual(t, receipt.ContractAddress.Hex(), "", "contract 생성 실패")
-	nftContractHash = receipt.ContractAddress.Hex()
+	contractAddr = receipt.ContractAddress
 	t.Log(tx.Hash.Hex())
-	t.Log(nftContractHash)
+	t.Log(contractAddr.Hex())
 }
 
 func TestCallRegister(t *testing.T) {
-	timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelFunc()
-	myAbi, err := web3.GetABI("./configs/blockchain/connection.abi")
+	myAbi, err := web3.GetABI("./configs/owner/blockchain/connection.abi")
 	require.Nil(t, err, "abi 조회 실패", err)
 
 	client, err := web3.Dial("https://api.baobab.klaytn.net:8651")
 	defer client.Close()
 	require.Nil(t, err, "클라이언트 연결 실패")
-	result, err := web3.CallConstantFunction(timeout, client, *myAbi, testAddr, "register",
-		nftContractHash, testAddr)
+	gasPrice, err := client.GetGasPrice(timeout)
+	require.Nil(t, err, "gas price 조회중 에러발생", err)
+
+	t.Log(testAddr, contractAddr.Hex())
+	result, err := web3.CallFunctionWithArgs(timeout,
+		client, privateKey, connectionAddr, big.NewInt(0),
+		gasPrice, 8_500_000,
+		*myAbi, myAbi.Methods["register"].Name,
+		testAddr, contractAddr.Hex(),
+	)
 	require.Nil(t, err, "function call 에러발생", err)
-	t.Log(result)
+	t.Log(result.Hash.Hex())
 }
