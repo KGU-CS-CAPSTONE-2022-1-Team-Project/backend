@@ -3,9 +3,9 @@ package google
 import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
+	"backend/tool"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/spf13/viper"
@@ -14,26 +14,17 @@ import (
 	userProfile "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 )
 
-type holderBlockchain struct {
-	Address    string `json:"address"`
-	PrivateKey string `json:"private_key"`
-}
-
 var Config *oauth2.Config
 
 func init() {
 	if !viper.IsSet("web") {
-		viper.SetConfigName("client_secret")
-		viper.SetConfigType("json")
-		viper.AddConfigPath("./configs/owner")
-		if err := viper.ReadInConfig(); err != nil {
-			panic(fmt.Errorf("viper error: %v", err))
-		}
+		tool.ReadConfig("./configs/owner", "client_secret", "json")
 	}
 	infoAuth := viper.GetStringMapStringSlice("web")
 	Config = &oauth2.Config{
@@ -202,10 +193,12 @@ func UpdateAddress(ctx *gin.Context) {
 		})
 		return
 	}
-	holder := &holderBlockchain{}
-	err := ctx.BindJSON(holder)
-	if err != nil || len(holder.Address) != 42 || holder.PrivateKey == "" {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseCommon{Message: "잘못된 파라미터"})
+	holder := RequestAddr{}
+	err := ctx.BindJSON(&holder)
+	if err != nil || len(holder.Address) != 42 {
+		log.Println(err)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest,
+			ResponseCommon{Message: "잘못된 파라미터"})
 		return
 	}
 	user.Address = holder.Address
@@ -214,5 +207,6 @@ func UpdateAddress(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "업데이트 실패"})
 		return
 	}
-	ctx.JSON(http.StatusOK, ResponseCommon{Message: "성공"})
+	ctx.AbortWithStatusJSON(http.StatusOK, ResponseCommon{Message: "성공"})
+	go RegisterContract(user.Address, user.ID)
 }

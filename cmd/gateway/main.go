@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/api/gateway/owner"
+	"backend/tool"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -15,12 +16,7 @@ var port string
 
 func init() {
 	if !viper.IsSet("port") {
-		viper.SetConfigName("services")
-		viper.SetConfigType("yaml")
-		viper.AddConfigPath("configs/gateway")
-		if err := viper.ReadInConfig(); err != nil {
-			panic(err)
-		}
+		tool.ReadConfig("./configs/gateway", "services", "yaml")
 	}
 	port = viper.GetStringMapString("gateway")["port"]
 }

@@ -73,7 +73,7 @@ func SetChannel(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, ResponseCommon{Message: "성공"})
 }
 
-func GetChannelInfo(ctx *gin.Context) {
+func GetChannel(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if id == "" {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, ResponseCommon{Message: "잘못된 파라미터"})

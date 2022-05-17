@@ -33,7 +33,7 @@ func init() {
 	privateKey = viper.GetString("key")
 	connectionAddr = viper.GetString("connectionAddr")
 	if !viper.IsSet("bytecode") || !viper.IsSet("abi") {
-		viper.SetConfigName("NFT")
+		viper.SetConfigName("nft")
 		viper.SetConfigType("json")
 		if err := viper.ReadInConfig(); err != nil {
 			panic(err)
@@ -64,7 +64,7 @@ func TestNFTContract(t *testing.T) {
 	tx, err := web3.DeployContract(timeout,
 		client,
 		privateKey, bytecode, nftAbiString, gasPrice, 8_500_000,
-		"name_test", "symbol_test", testAddr, connectionAddr, "test_url")
+		"name_test", "name_test", testAddr, connectionAddr, "test_url")
 	require.Nil(t, err, "deployment 에러발생", err)
 	var receipt *web3.Receipt
 	for {

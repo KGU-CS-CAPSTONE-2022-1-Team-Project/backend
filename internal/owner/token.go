@@ -2,7 +2,7 @@ package owner
 
 import (
 	"backend/infrastructure/owner/dao"
-	"fmt"
+	"backend/tool"
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -13,12 +13,7 @@ var tokenSecret string
 
 func init() {
 	if !viper.IsSet("token_secert") {
-		viper.SetConfigName("client_secret")
-		viper.SetConfigType("json")
-		viper.AddConfigPath("configs/owner")
-		if err := viper.ReadInConfig(); err != nil {
-			panic(fmt.Errorf("viper error: %v", err))
-		}
+		tool.ReadConfig("./configs/owner", "client_secret", "json")
 	}
 	tokenSecret = viper.GetString("token_secert")
 }

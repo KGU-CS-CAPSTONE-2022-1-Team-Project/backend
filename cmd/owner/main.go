@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/api/owner/google"
+	"backend/tool"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -17,12 +18,7 @@ var port string
 
 func init() {
 	if !viper.IsSet("port") {
-		viper.SetConfigName("client_secert")
-		viper.SetConfigType("json")
-		viper.AddConfigPath("configs/owner")
-		if err := viper.ReadInConfig(); err != nil {
-			panic(err)
-		}
+		tool.ReadConfig("./configs/owner", "client_secert", "json")
 	}
 	port = viper.GetString("port")
 }
@@ -36,7 +32,7 @@ func main() {
 		google.CreateToken)
 	r.PUT(Youtuber, google.GetUser, google.ISYoutuber, google.SetChannel)
 	r.PUT(Address, google.GetUser, google.UpdateAddress)
-	r.GET(Youtuber+"/:id", google.GetChannelInfo)
+	r.GET(Youtuber+"/:id", google.GetChannel)
 	err := r.Run(":" + port)
 	if err != nil {
 		panic(err)
