@@ -2,20 +2,21 @@ version: '3.7'
 
 services:
   api-gateway:
+    container_name: api-gateway
     build:
-      context: ../
-      dockerfile: ./build/gateway.DOCKERFILE
+      context: ../..
+      dockerfile: build/docker/gateway.DOCKERFILE
     ports:
       - "10321:10321"
-
-  server-auth:
+  server-owner:
+    container_name: server-user
     build:
-      context: ../
-      dockerfile: ./build/auth-server.DOCKERFILE
+      context: ../..
+      dockerfile: build/docker/owner-server.DOCKERFILE
     ports:
       - "8000:8000"
-
   db-auth:
+    container_name: db-user
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
     restart: on-failure
@@ -23,7 +24,7 @@ services:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_auth_root_secert
       MYSQL_USER: auth
       MYSQL_PASSWORD_FILE: /run/secrets/db_auth_user_secert
-      MYSQL_DATABASE: auth'
+      MYSQL_DATABASE: auth
       MYSQL_TCP_PORT: 27777
     ports:
       - "15345:27777"
@@ -33,6 +34,6 @@ services:
 
 secrets:
   db_auth_root_secert:
-    file: ../configs/docker_secrets/db_root_secert.txt
+    file: ../../configs/docker_secrets/db_root_secert.txt
   db_auth_user_secert:
-    file: ../configs/docker_secrets/db_user_secret.txt
+    file: ../../configs/docker_secrets/db_user_secret.txt
