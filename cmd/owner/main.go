@@ -2,16 +2,13 @@ package main
 
 import (
 	"backend/api/owner/google"
+	"backend/proto/owner/pb"
 	"backend/tool"
-	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-)
-
-const (
-	GoogleAuth         = "/owner/google"
-	GoogleAuthCallback = "/owner/google/callback"
-	Youtuber           = "/owner/youtuber"
-	Address            = "/owner/address"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"log"
+	"net"
 )
 
 var port string
@@ -24,17 +21,14 @@ func init() {
 }
 
 func main() {
-	r := gin.Default()
-	r.POST(GoogleAuth, google.CheckNotUser, google.RequestAuth)
-	r.GET(GoogleAuthCallback,
-		google.GetTokenByGoogleServer,
-		google.RegisterUser,
-		google.CreateToken)
-	r.PUT(Youtuber, google.GetUser, google.ISYoutuber, google.SetChannel)
-	r.PUT(Address, google.GetUser, google.UpdateAddress)
-	r.GET(Youtuber+"/:id", google.GetChannel)
-	err := r.Run(":" + port)
+	listen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		panic(err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterOwnerServer(s, &google.OwnerService{})
+	reflection.Register(s)
+	if err := s.Serve(listen); err != nil {
+		log.Fatalf("failed to serve: %v", err)
 	}
 }

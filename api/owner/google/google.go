@@ -3,20 +3,15 @@ package google
 import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
+	"backend/proto/owner/pb"
 	"backend/tool"
 	"context"
-	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	userProfile "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
-	"gorm.io/gorm"
-	"log"
-	"net/http"
-	"strings"
 	"time"
 )
 
@@ -36,177 +31,127 @@ func init() {
 	}
 }
 
-func getGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) {
-	source := Config.TokenSource(ctx, token)
-	client, err := userProfile.NewService(ctx, option.WithTokenSource(source))
-	userInfo, err := client.Userinfo.Get().Do()
-	if err != nil {
-		return "", err
-	}
-	return userInfo.Email, nil
+type OwnerService struct {
+	pb.UnimplementedOwnerServer
 }
 
-func CheckNotUser(ctx *gin.Context) {
-	headerAuth := ctx.Request.Header.Get("Authorization")
-	token := strings.TrimPrefix(headerAuth, "Bearer ")
-	if token == "" {
-		ctx.Next()
-		return
-	}
+func (receiver *OwnerService) isValidate(tokenString string) error {
 	accessToken := owner.AccessToken{}
-	err := owner.Validate(&accessToken, token)
-	if err == nil {
-		ctx.AbortWithStatusJSON(http.StatusOK, ResponseCommon{
-			Message: "success",
-		})
-		return
+	err := owner.Validate(&accessToken, tokenString)
+	if err != nil {
+		return errors.Wrap(err, "not validate")
 	}
+	return nil
 }
 
-func GetUser(ctx *gin.Context) {
-	headerAuth := ctx.Request.Header.Get("Authorization")
-	tokenString := strings.TrimPrefix(headerAuth, "Bearer ")
-	tokenInfo := owner.AccessToken{}
-	err := owner.GetAuthInfo(&tokenInfo, tokenString)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "파싱 실패"})
-		return
-	}
-	tmp := dao.User{ID: tokenInfo.UserID}
-	user, err := tmp.Read()
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "db조회 실패"})
-		return
-	}
-	ctx.Set("user", user)
+func (receiver *OwnerService) exchangeGoogle(ctx context.Context, code string) (*oauth2.Token, error) {
+	timeout, cancelFunc := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelFunc()
+	return Config.Exchange(timeout, code)
 }
 
-func RequestAuth(ctx *gin.Context) {
+func (receiver *OwnerService) getGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) {
+	timeout, cancelFunc := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelFunc()
+	source := Config.TokenSource(timeout, token)
+	client, err := userProfile.NewService(timeout, option.WithTokenSource(source))
+	userInfo, err := client.Userinfo.Get().Do()
+	return userInfo.Email, err
+}
+
+func (receiver *OwnerService) Google(_ context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	url := Config.AuthCodeURL(
-		ctx.ClientIP(),
+		req.Ip,
 		oauth2.AccessTypeOffline,
 	)
-	ctx.JSON(http.StatusTemporaryRedirect,
-		ResponseAuth{
-			Message: "인증 필요",
-			AuthUrl: url,
-		})
+	return &pb.LoginResponse{
+		AuthUrl: url,
+	}, nil
 }
 
-func GetTokenByGoogleServer(ctx *gin.Context) {
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	code := ctx.Query("code")
-	token, err := Config.Exchange(ctxTimeout, code)
+func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	token, err := receiver.exchangeGoogle(ctx, req.Code)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
-			Message: "exchange실패",
-		})
-		return
+		return nil, err
 	}
-	ctx.Set("token", token)
-}
-
-func RegisterUser(ctx *gin.Context) {
-	tokenType, _ := ctx.Get("token")
-	token := tokenType.(*oauth2.Token)
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	email, err := getGoogleEmail(ctxTimeout, token)
-	if err != nil || email == "" {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, ResponseCommon{Message: "이메일 권한 필요"})
+	email, err := receiver.getGoogleEmail(ctx, token)
+	if err != nil {
+		return nil, err
 	}
-	user := owner.User{
+	userDB := dao.User{Email: email}
+	result, err := userDB.Read()
+	userDB = dao.User{
+		ID:           result.ID,
+		Email:        email,
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
-		Email:        email,
 	}
-	hasEmail := owner.User2UserDB(owner.User{Email: email})
-	result, err := hasEmail.Read()
-	var userDB dao.User
 	if err == nil {
-		result.AccessToken = token.AccessToken
-		result.RefreshToken = token.RefreshToken
-		err = result.Save()
+		err = userDB.Save()
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-				ResponseCommon{Message: "갱신 실패"})
-			return
+			return nil, err
 		}
-		userDB = *result
-	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		userDB = owner.User2UserDB(user)
+	} else if dao.IsEmpty(err) {
 		err = userDB.Create()
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-				ResponseCommon{
-					Message: "DB에러",
-				})
-			return
+			return nil, err
 		}
 	} else {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
-			Message: "관리자에게 문의해주세요",
-		})
-		return
+		return nil, err
 	}
-	ctx.Set("userDB", userDB)
-}
-
-func CreateToken(ctx *gin.Context) {
-	value, exist := ctx.Get("userDB")
-	if !exist {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{
-			Message: "관리자에게 문의해주세요",
-		})
-		return
-	}
-	userDB := value.(dao.User)
 	accessToken := owner.AccessToken{
-		UserID:         userDB.ID,
-		StandardClaims: jwt.StandardClaims{},
+		UserID: userDB.ID,
 	}
-	accessTokenString, err := owner.CreateTokenString(&accessToken)
+	tokenString, err := owner.CreateTokenString(&accessToken)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError,
-			ResponseCommon{
-				Message: "관리자에게 문의하세요",
-			})
-		return
+		return nil, err
 	}
-	ctx.AbortWithStatusJSON(http.StatusOK, ResponseAuth{
-		Message:     "success",
-		AccessToken: accessTokenString,
-	})
+	return &pb.RegisterResponse{
+		AccessToken: tokenString,
+	}, nil
 }
 
-func UpdateAddress(ctx *gin.Context) {
-	tmp, exist := ctx.Get("user")
-	if !exist {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "유저정보교환 실패"})
-		return
-	}
-	user := tmp.(*dao.User)
-	if !user.IsAuthedStreamer {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, ResponseCommon{
-			Message: "미인증된 채널",
-		})
-		return
-	}
-	holder := RequestAddr{}
-	err := ctx.BindJSON(&holder)
-	if err != nil || len(holder.Address) != 42 {
-		log.Println(err)
-		ctx.AbortWithStatusJSON(http.StatusBadRequest,
-			ResponseCommon{Message: "잘못된 파라미터"})
-		return
-	}
-	user.Address = holder.Address
-	err = user.Save()
+func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequest) (*pb.AddressResponse, error) {
+	err := receiver.isValidate(req.AccessToken)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, ResponseCommon{Message: "업데이트 실패"})
-		return
+		return nil, err
 	}
-	ctx.AbortWithStatusJSON(http.StatusOK, ResponseCommon{Message: "성공"})
-	go RegisterContract(user.Address, user.ID)
+	accessToken := owner.AccessToken{}
+	err = owner.GetAuthInfo(&accessToken, req.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+	userDB := dao.User{ID: accessToken.UserID}
+	result, err := userDB.Read()
+	if err != nil {
+		return nil, err
+	}
+	channel, err := GetYoutubeChannel(result)
+	if err != nil {
+		return nil, err
+	}
+	result.Address = req.Address
+	SetChannel(result, channel)
+	err = result.Save()
+	if err != nil {
+		return nil, err
+	}
+	go RegisterContract(req.Address, userDB.ID)
+	return &pb.AddressResponse{
+		IsValidate: true,
+	}, nil
+}
+
+func (receiver OwnerService) GetChannel(_ context.Context, req *pb.ChannelRequest) (*pb.ChannelResponse, error) {
+	userDB := dao.User{ID: req.Id}
+	result, err := userDB.Read()
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ChannelResponse{
+		Title:       result.Channel.Name,
+		Description: result.Channel.Description,
+		Image:       result.Channel.Image,
+		Url:         result.Channel.Url,
+	}, nil
 }

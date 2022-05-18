@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.7.7
-	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gochain/gochain/v3 v3.4.9
 	github.com/gochain/web3 v0.2.87
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -14,6 +13,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
 	google.golang.org/api v0.77.0
+	google.golang.org/grpc v1.45.0
+	google.golang.org/protobuf v1.28.0
 	gorm.io/driver/mysql v1.3.3
 	gorm.io/gorm v1.23.4
 )
@@ -67,8 +68,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4 // indirect
-	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	Auth    = "/auth"
-	Address = "/owner/address"
+	GoogleAuth         = "/owner/google"
+	GoogleAuthCallback = "/owner/google/callback"
+	Youtuber           = "/owner/youtuber"
 )
 
 var port string
@@ -23,8 +24,10 @@ func init() {
 
 func main() {
 	r := gin.Default()
-	r.GET(Auth, owner.IsAuth)
-	r.PUT(Address, owner.Address)
+	r.GET(GoogleAuth, owner.Redirecting)
+	r.GET(GoogleAuthCallback, owner.RegisterUser)
+	r.PUT(Youtuber, owner.AuthYoutuber)
+	r.GET(Youtuber+"/:id", owner.GetChannel)
 	err := r.Run(":" + port)
 	if err != nil {
 		panic(err)

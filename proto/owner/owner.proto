@@ -1,0 +1,48 @@
+syntax ='proto3';
+
+
+option go_package ="/proto/owner/pb";
+
+service Owner{
+  rpc Google(LoginRequest) returns(LoginResponse){};
+  rpc GoogleCallBack(RegisterRequest) returns(RegisterResponse){};
+  rpc SaveAddress(AddressRequest) returns(AddressResponse){};
+  rpc GetChannel(ChannelRequest) returns(ChannelResponse){};
+}
+
+message LoginRequest{
+  string ip=1;
+}
+
+message LoginResponse{
+  string authUrl=1;
+}
+
+message RegisterRequest{
+  string code=1;
+}
+
+message RegisterResponse{
+  string accessToken=1;
+}
+
+message AddressRequest{
+  string address=1;
+  string accessToken=2;
+}
+
+message AddressResponse{
+  bool isValidate=1;
+}
+
+message ChannelRequest{
+  string id=1;
+}
+
+message ChannelResponse{
+  string title=1;
+  string description=2;
+  string image=3;
+  string url=4;
+  bool isEmpty=5;
+}

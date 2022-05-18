@@ -1,86 +1,119 @@
 package owner
 
 import (
-	"backend/api/gateway/hosts"
-	"encoding/json"
+	"backend/api/gateway/client"
+	"backend/proto/owner/pb"
+	"context"
 	"github.com/gin-gonic/gin"
-	"github.com/go-resty/resty/v2"
 	"net/http"
+	"strings"
+	"time"
 )
 
-type Result struct {
-	Message     string `json:"message"`
-	AuthUrl     string `json:"auth_url,omitempty"`
-	AccessToken string `json:"access_token,omitempty"`
-}
-
-var client = resty.New()
-
 type holderAddress struct {
-	Address string `json:"address"`
+	Address string
 }
 
-func IsAuth(ctx *gin.Context) {
-	result := &Result{}
-	client := resty.New()
-	httpInfo, err := client.R().SetHeader("Authorization",
-		ctx.Request.Header.Get("Authorization")).
-		Post(hosts.Owner + "/owner/google")
+func Redirecting(ctx *gin.Context) {
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFunc()
+	res, err := client.Owner().Google(timeout, &pb.LoginRequest{Ip: ctx.ClientIP()})
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "인증 서버 호출 실패",
+			"message": "내부서버 오류",
 		})
-		return
 	}
-	err = json.Unmarshal(httpInfo.Body(), &result)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Result{
-			Message: "게이트웨이 서버 에러",
-		})
-		return
-	}
-	switch httpInfo.StatusCode() {
-	case http.StatusTemporaryRedirect:
-		ctx.Redirect(http.StatusFound, result.AuthUrl)
-	case http.StatusOK:
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "validate",
-		})
-	default:
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, result)
-	}
+	ctx.Redirect(http.StatusTemporaryRedirect, res.AuthUrl)
 }
 
-func Address(ctx *gin.Context) {
-	holder := &holderAddress{}
-	err := ctx.BindJSON(holder)
+func RegisterUser(ctx *gin.Context) {
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFunc()
+	code := ctx.Query("code")
+	req := pb.RegisterRequest{Code: code}
+	res, err := client.Owner().GoogleCallBack(timeout, &req)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, Result{Message: "잘못된 파라미터"})
-		return
-	}
-	httpInfo, err := client.R().SetHeader("Authorization",
-		ctx.Request.Header.Get("Authorization")).
-		SetBody(holder).
-		Put(hosts.Owner + "/owner/address")
-	result := &Result{}
-	err = json.Unmarshal(httpInfo.Body(), &result)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, Result{
-			Message: "인증 서버 호출 실패",
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "내부서버 오류",
 		})
 		return
 	}
-	switch httpInfo.StatusCode() {
-	case http.StatusOK:
-		ctx.JSON(http.StatusOK, Result{
-			Message: "success",
+	ctx.JSON(http.StatusOK, gin.H{
+		"access_token": res.AccessToken,
+	})
+}
+
+func AuthYoutuber(ctx *gin.Context) {
+	auth := ctx.Request.Header.Get("Authorization")
+	if auth == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Not Find Authorization Header",
 		})
-	case http.StatusForbidden:
-		ctx.JSON(http.StatusForbidden, result)
-	case http.StatusBadRequest:
-		ctx.JSON(http.StatusBadRequest, Result{Message: "서버에 값전달 실패"})
-	default:
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, result)
 		return
 	}
+	token := strings.TrimPrefix(auth, "Bearer ")
+	if token == auth {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Could not find token",
+		})
+		return
+	}
+	holder := holderAddress{}
+	err := ctx.Bind(&holder)
+	if err != nil || holder.Address == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "Could not find address",
+		})
+	}
+
+	req := pb.AddressRequest{Address: holder.Address, AccessToken: token}
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFunc()
+	res, err := client.Owner().SaveAddress(timeout, &req)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "내부 서버 에러",
+		})
+		return
+	}
+	if !res.IsValidate {
+		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"message": "인증 실패" + err.Error(),
+		})
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "success",
+	})
+}
+
+func GetChannel(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "ID not found",
+		})
+		return
+	}
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFunc()
+	req := pb.ChannelRequest{Id: id}
+	res, err := client.Owner().GetChannel(timeout, &req)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"message": "내부서버 오류",
+		})
+		return
+	}
+	if res.IsEmpty {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+			"message": "존재하지 않는 채널",
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"title":       res.Title,
+		"description": res.Description,
+		"image":       res.Image,
+		"url":         res.Url,
+	})
 }

@@ -1,9 +1,5 @@
 package owner
 
-import (
-	"backend/infrastructure/owner/dao"
-)
-
 type User struct {
 	ID               string
 	Email            string
@@ -17,16 +13,6 @@ type User struct {
 type Channel struct {
 	Name        string
 	Description string
-	image       string
+	Image       string
 	URL         string
-}
-
-func User2UserDB(user User) dao.User {
-	return dao.User{
-		ID:               user.ID,
-		Email:            user.Email,
-		IsAuthedStreamer: user.IsAuthedStreamer,
-		AccessToken:      user.AccessToken,
-		RefreshToken:     user.RefreshToken,
-	}
 }
