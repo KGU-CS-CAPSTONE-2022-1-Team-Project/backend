@@ -3,7 +3,7 @@ package google
 import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
-	"backend/proto/owner/pb"
+	owner2 "backend/proto/owner"
 	"backend/tool"
 	"context"
 	"github.com/pkg/errors"
@@ -32,7 +32,7 @@ func init() {
 }
 
 type OwnerService struct {
-	pb.UnimplementedOwnerServer
+	owner2.UnimplementedOwnerServer
 }
 
 func (receiver *OwnerService) isValidate(tokenString string) error {
@@ -59,17 +59,17 @@ func (receiver *OwnerService) getGoogleEmail(ctx context.Context, token *oauth2.
 	return userInfo.Email, err
 }
 
-func (receiver *OwnerService) Google(_ context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+func (receiver *OwnerService) Google(_ context.Context, req *owner2.LoginRequest) (*owner2.LoginResponse, error) {
 	url := Config.AuthCodeURL(
 		req.Ip,
 		oauth2.AccessTypeOffline,
 	)
-	return &pb.LoginResponse{
+	return &owner2.LoginResponse{
 		AuthUrl: url,
 	}, nil
 }
 
-func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *owner2.RegisterRequest) (*owner2.RegisterResponse, error) {
 	token, err := receiver.exchangeGoogle(ctx, req.Code)
 	if err != nil {
 		return nil, err
@@ -106,12 +106,12 @@ func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *pb.Regist
 	if err != nil {
 		return nil, err
 	}
-	return &pb.RegisterResponse{
+	return &owner2.RegisterResponse{
 		AccessToken: tokenString,
 	}, nil
 }
 
-func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequest) (*pb.AddressResponse, error) {
+func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.AddressRequest) (*owner2.AddressResponse, error) {
 	err := receiver.isValidate(req.AccessToken)
 	if err != nil {
 		return nil, err
@@ -137,18 +137,18 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequ
 		return nil, err
 	}
 	go RegisterContract(req.Address, userDB.ID)
-	return &pb.AddressResponse{
+	return &owner2.AddressResponse{
 		IsValidate: true,
 	}, nil
 }
 
-func (receiver OwnerService) GetChannel(_ context.Context, req *pb.ChannelRequest) (*pb.ChannelResponse, error) {
+func (receiver *OwnerService) GetChannel(_ context.Context, req *owner2.ChannelRequest) (*owner2.ChannelResponse, error) {
 	userDB := dao.User{ID: req.Id}
 	result, err := userDB.Read()
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ChannelResponse{
+	return &owner2.ChannelResponse{
 		Title:       result.Channel.Name,
 		Description: result.Channel.Description,
 		Image:       result.Channel.Image,

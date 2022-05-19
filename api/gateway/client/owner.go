@@ -1,7 +1,7 @@
 package client
 
 import (
-	"backend/proto/owner/pb"
+	ownerPb "backend/proto/owner"
 	"backend/tool"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -9,21 +9,21 @@ import (
 	"sync"
 )
 
-var client pb.OwnerClient
+var ownerClient ownerPb.OwnerClient
 
-var once sync.Once
+var ownerOnce sync.Once
 
-func Owner() pb.OwnerClient {
-	if client == nil {
-		once.Do(func() {
+func Owner() ownerPb.OwnerClient {
+	if ownerClient == nil {
+		ownerOnce.Do(func() {
 			tool.ReadConfig("./config/gateway", "services", "yaml")
 			info := viper.GetStringMapString("owner")
 			conn, err := grpc.Dial(info["host"]+":"+info["port"], grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				panic(err)
 			}
-			client = pb.NewOwnerClient(conn)
+			ownerClient = ownerPb.NewOwnerClient(conn)
 		})
 	}
-	return client
+	return ownerClient
 }

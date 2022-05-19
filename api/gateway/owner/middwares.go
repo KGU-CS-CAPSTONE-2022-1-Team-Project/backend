@@ -2,7 +2,7 @@ package owner
 
 import (
 	"backend/api/gateway/client"
-	"backend/proto/owner/pb"
+	pb "backend/proto/owner"
 	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"

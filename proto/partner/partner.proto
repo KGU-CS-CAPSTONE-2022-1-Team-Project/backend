@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "/proto/partner";
+
+service PartnerService{
+  rpc SaveNFTInfo(SaveRequest) returns(SaveResponse){};
+  rpc LoadNFTInfo(LoadRequest) returns(LoadResponse){};
+}
+
+message SaveRequest{
+  ImageFile file=1;
+  string name = 2;
+  string description = 3;
+}
+
+message SaveResponse{
+  string id = 1;
+  bool success = 2;
+  Status status=3;
+}
+
+message LoadRequest{
+  string id = 1;
+}
+
+message LoadResponse{
+  string name = 1;
+  string description = 2;
+  string url = 3;
+  Status status=4;
+}
+
+message ImageFile{
+  bytes chunk = 1;
+}
+
+message Status{
+  uint32 code=1;
+  string message=2;
+}

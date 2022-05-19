@@ -1,36 +1,10 @@
 package dao
 
 import (
-	"errors"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
-
-type User struct {
-	ID               string `gorm:"primaryKey'"`
-	Email            string `gorm:"not_null"`
-	IsAuthedStreamer bool   `gorm:"not_null"`
-	AccessToken      string
-	RefreshToken     string
-	Address          string
-	Channel
-	gorm.Model
-}
-
-type Channel struct {
-	Name        string
-	Description string
-	Image       string
-	Url         string
-}
-
-func init() {
-	user := User{}
-	err := user.Migration()
-	if err != nil {
-		panic("Fail migration")
-	}
-}
 
 // BeforeCreate is gorm Hook. plz not call.
 func (receiver *User) BeforeCreate(_ *gorm.DB) (err error) {
@@ -41,7 +15,7 @@ func (receiver *User) BeforeCreate(_ *gorm.DB) (err error) {
 func (receiver *User) Migration() error {
 	db, err := dbConnection()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Migration")
 	}
 	err = db.Migrator().AutoMigrate(receiver)
 	if err != nil {
