@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: proto/owner/owner.proto
 
-package pb
+package owner
 
 import (
 	context "context"
