@@ -24,7 +24,7 @@ type Token interface {
 	parser(tokenString string) error
 }
 
-func Validate(t Token, tokenString string) error {
+func TokenValidate(t Token, tokenString string) error {
 	return t.validate(tokenString)
 }
 
@@ -52,7 +52,7 @@ func (r *AccessToken) validate(tokenString string) error {
 			return nil, errors.Wrap(err, "토큰 유효기간 혹은 생성시간")
 		}
 		// 3. db의 데이터와 일치하는지확인
-		user := dao.User{
+		user := dao.Owner{
 			ID: r.UserID,
 		}
 		if _, err := user.Read(); err != nil {

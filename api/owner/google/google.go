@@ -37,7 +37,7 @@ type OwnerService struct {
 
 func (receiver *OwnerService) isValidate(tokenString string) error {
 	accessToken := owner.AccessToken{}
-	err := owner.Validate(&accessToken, tokenString)
+	err := owner.TokenValidate(&accessToken, tokenString)
 	if err != nil {
 		return errors.Wrap(err, "not validate")
 	}
@@ -78,9 +78,9 @@ func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *owner2.Re
 	if err != nil {
 		return nil, err
 	}
-	userDB := dao.User{Email: email}
+	userDB := dao.Owner{Email: email}
 	result, err := userDB.Read()
-	userDB = dao.User{
+	userDB = dao.Owner{
 		ID:           result.ID,
 		Email:        email,
 		AccessToken:  token.AccessToken,
@@ -121,7 +121,7 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 	if err != nil {
 		return nil, err
 	}
-	userDB := dao.User{ID: accessToken.UserID}
+	userDB := dao.Owner{ID: accessToken.UserID}
 	result, err := userDB.Read()
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 }
 
 func (receiver *OwnerService) GetChannel(_ context.Context, req *owner2.ChannelRequest) (*owner2.ChannelResponse, error) {
-	userDB := dao.User{ID: req.Id}
+	userDB := dao.Owner{ID: req.Id}
 	result, err := userDB.Read()
 	if err != nil {
 		return nil, err

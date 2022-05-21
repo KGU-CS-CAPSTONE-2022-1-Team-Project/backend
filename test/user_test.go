@@ -4,6 +4,7 @@ import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
 	"backend/internal/owner/youtuber"
+	"backend/tool"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -29,12 +30,7 @@ import (
 var tokenSecret string
 
 func init() {
-	viper.SetConfigName("test_secret")
-	viper.SetConfigType("json")
-	viper.AddConfigPath("../configs/owner")
-	if err := viper.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("viper error: %v", err))
-	}
+	tool.ReadConfig("./configs/owner", "test_secret", "json")
 	tokenSecret = viper.GetString("token_secert")
 }
 
@@ -50,10 +46,10 @@ func dbConnection() *gorm.DB {
 }
 
 func TestCreateUser(t *testing.T) {
-	mock := owner.User{
+	mock := owner.Owner{
 		Email: "test@test.com",
 	}
-	userDB := dao.User{
+	userDB := dao.Owner{
 		Email: mock.Email,
 	}
 	defer func() {
@@ -68,13 +64,16 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestMigration(t *testing.T) {
-	user := dao.User{}
-	err := user.Migration()
-	require.Nil(t, err, "마이그레이션")
+	temp1 := dao.Owner{}
+	temp2 := dao.User{}
+	err := temp1.Migration()
+	require.Nil(t, err, "Owner 마이그레이션", err)
+	err = temp2.Migration()
+	require.Nil(t, err, "Owner 마이그레이션", err)
 }
 
 func TestAccessToken(t *testing.T) {
-	userDB := dao.User{
+	userDB := dao.Owner{
 		Email: "test@test.com",
 	}
 	defer func() {
@@ -91,7 +90,7 @@ func TestAccessToken(t *testing.T) {
 	accessTokenString, err := owner.CreateTokenString(&src)
 	assert.Nil(t, err, "생성 실패", err)
 	dst := owner.AccessToken{}
-	err = owner.Validate(&dst, accessTokenString)
+	err = owner.TokenValidate(&dst, accessTokenString)
 	assert.Nil(t, err, "정상토큰을 오류로 인식", err, errors.Cause(err))
 	assert.True(t, reflect.DeepEqual(src, dst), "같은 토큰이나 서로 다른정보로 인식")
 
@@ -100,10 +99,10 @@ func TestAccessToken(t *testing.T) {
 		UserID:         uuid.NewString(),
 		StandardClaims: jwt.StandardClaims{},
 	}
-	err = owner.Validate(&dst, accessTokenString)
+	err = owner.TokenValidate(&dst, accessTokenString)
 	assert.Nil(t, err, "정상토큰을 검증실패", "에러내용: ", err)
 	accessTokenString, _ = owner.CreateTokenString(&notFoundUUIDToken)
-	err = owner.Validate(&notFoundUUIDToken, accessTokenString)
+	err = owner.TokenValidate(&notFoundUUIDToken, accessTokenString)
 	assert.NotNil(t, err, "db에 존재하지 않는 토큰")
 	expiredToken := owner.AccessToken{
 		UserID: result.ID,
@@ -113,7 +112,7 @@ func TestAccessToken(t *testing.T) {
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, &expiredToken)
 	accessTokenString, _ = at.SignedString([]byte(tokenSecret))
-	err = owner.Validate(&notFoundUUIDToken, accessTokenString)
+	err = owner.TokenValidate(&notFoundUUIDToken, accessTokenString)
 	assert.NotNil(t, err, "만료된 토큰")
 	wrongAlgorithmToken := owner.AccessToken{
 		UserID: result.ID,
@@ -125,7 +124,7 @@ func TestAccessToken(t *testing.T) {
 	at = jwt.NewWithClaims(jwt.SigningMethodHS384, &wrongAlgorithmToken)
 	accessTokenString, err = at.SignedString([]byte(tokenSecret))
 	require.Nil(t, err, "다른알고리즘생성실패")
-	err = owner.Validate(&wrongAlgorithmToken, accessTokenString)
+	err = owner.TokenValidate(&wrongAlgorithmToken, accessTokenString)
 	assert.NotNil(t, err, "잘못된 알고리즘 통과")
 }
 
@@ -220,5 +219,49 @@ func TestValidateYoutuber(t *testing.T) {
 			err = youtuber.ValidateChannel(&mock)
 			assert.NotNil(t, err, "영상 개수 부족")
 		}
+	}
+}
+
+func TestValidateAddrAndNickname(t *testing.T) {
+	conn := dbConnection()
+	usr := owner.User{
+		Address:  "0xd753883f95e059abbde245c150cb87dc513044f7",
+		Nickname: "wahaha",
+	}
+	defer conn.Delete(usr)
+	err := owner.Validate(&usr)
+	require.Nil(t, err, "정상값을 에러처리", err)
+	userDAO := owner.User2UserDB(usr)
+	err = userDAO.Save()
+	assert.Nil(t, err, "정상값 저장 실패", err)
+
+	failCases := [4]owner.User{}
+	for caseIdx, failCase := range failCases {
+		switch caseIdx {
+		case 0:
+			// 빈 값
+			failCase = owner.User{}
+			err = owner.Validate(&failCase)
+		case 1:
+			// 잘못된 주소값
+			failCase = owner.User{
+				Address:  "0xd753883f95e059abbde245c150cb87dc51304",
+				Nickname: "wahaha",
+			}
+		case 2:
+			// 짧은 닉네임길이
+			failCase = owner.User{
+				Address:  "0xd753883f95e059abbde245c150cb87dc51304",
+				Nickname: "김김김",
+			}
+		case 3:
+			// 긴 닉네임길이
+			failCase = owner.User{
+				Address:  "0xd753883f95e059abbde245c150cb87dc51304",
+				Nickname: "김김김김김김김김김김김김",
+			}
+		}
+		err = owner.Validate(&failCase)
+		assert.NotNil(t, err, "에러값을 정상처리", "case:", caseIdx)
 	}
 }
