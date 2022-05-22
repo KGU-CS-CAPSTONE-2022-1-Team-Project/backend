@@ -3,9 +3,10 @@ package dao
 import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"time"
 )
 
-type User struct {
+type Original struct {
 	ID               string `gorm:"primaryKey'"`
 	Email            string `gorm:"not_null"`
 	IsAuthedStreamer bool   `gorm:"not_null"`
@@ -23,9 +24,21 @@ type Channel struct {
 	Url         string
 }
 
+type User struct {
+	Address   string `gorm:"primaryKey"`
+	Nickname  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 func init() {
+	owner := Original{}
 	user := User{}
-	err := user.Migration()
+	err := owner.Migration()
+	if err != nil {
+		panic(errors.Wrap(err, "init"))
+	}
+	err = user.Migration()
 	if err != nil {
 		panic(errors.Wrap(err, "init"))
 	}

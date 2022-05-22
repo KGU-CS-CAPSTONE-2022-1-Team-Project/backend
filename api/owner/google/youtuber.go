@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func GetYoutubeChannel(user *dao.User) (*youtube.Channel, error) {
+func GetYoutubeChannel(user *dao.Original) (*youtube.Channel, error) {
 	googleToken := oauth2.Token{
 		AccessToken:  user.AccessToken,
 		TokenType:    "Bearer",
@@ -36,7 +36,7 @@ func GetYoutubeChannel(user *dao.User) (*youtube.Channel, error) {
 	return result.Items[0], nil
 }
 
-func SetChannel(user *dao.User, channel *youtube.Channel) {
+func SetChannel(user *dao.Original, channel *youtube.Channel) {
 	user.Channel.Name = channel.Snippet.Title
 	user.Channel.Description = channel.Snippet.Description
 	user.Channel.Url = "https://youtube.com/channel/" + channel.Id

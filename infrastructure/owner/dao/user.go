@@ -1,70 +1,58 @@
 package dao
 
 import (
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
-// BeforeCreate is gorm Hook. plz not call.
-func (receiver *User) BeforeCreate(_ *gorm.DB) (err error) {
-	receiver.ID = uuid.NewString()
-	return nil
-}
-
 func (receiver *User) Migration() error {
-	db, err := dbConnection()
-	if err != nil {
-		return errors.Wrap(err, "Migration")
-	}
-	err = db.Migrator().AutoMigrate(receiver)
+	err := db.Migrator().AutoMigrate(receiver)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (receiver *User) Create() error {
-	db, err := dbConnection()
-	if err != nil {
-		return err
+func (receiver *User) Load() error {
+	if receiver.Address == "" && receiver.Nickname == "" {
+		return errors.New("invalidate param")
 	}
-	err = db.Create(receiver).Error
-	if err != nil {
-		return err
-	}
-	return nil
+	return db.First(receiver).Error
 }
 
 func (receiver *User) Save() error {
-	db, err := dbConnection()
+	return db.Create(receiver).Error
+}
+
+func (receiver *User) Read() error {
+	if receiver.Address != "" {
+		if receiver.Nickname != "" {
+			return errors.Wrap(receiver.readByAll(), "readByAll")
+		}
+		return errors.Wrap(receiver.readByAddr(), "readByAddr")
+	} else if receiver.Nickname != "" {
+		return errors.Wrap(receiver.readByNickname(), "readByNickname")
+	}
+	err := db.First(receiver).Error
 	if err != nil {
-		return err
+		return errors.Wrap(err, "User.Read")
 	}
-	return db.Save(receiver).Error
+	return nil
 }
 
-func (receiver *User) Read() (*User, error) {
-	db, err := dbConnection()
-	if err != nil {
-		return nil, err
-	}
-	if receiver.ID != "" {
-		return receiver.readByUserID(db)
-	}
-	if receiver.Email != "" {
-		return receiver.readByEmail(db)
-	}
-	return nil, errors.New("찾을 수 없는 조건")
+func (receiver *User) readByAddr() error {
+	receiver.Nickname = ""
+	return db.First(receiver).Error
 }
 
-func (receiver *User) readByUserID(conn *gorm.DB) (*User, error) {
-	result := &User{}
-	return result, conn.First(&result, "id", receiver.ID).Error
+func (receiver *User) readByNickname() error {
+	return db.First(receiver, "nickname=?", receiver.Nickname).Error
 }
-
-func (receiver *User) readByEmail(conn *gorm.DB) (*User, error) {
-	result := &User{}
-	return result, conn.First(&result, "email=?",
-		receiver.Email).Error
+func (receiver *User) readByAll() error {
+	address := receiver.Address
+	nickname := receiver.Nickname
+	receiver.Nickname = ""
+	receiver.Address = ""
+	return db.First(receiver, "nickname=? OR address=?",
+		nickname,
+		address).Error
 }
