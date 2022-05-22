@@ -24,14 +24,5 @@ func init() {
 	if err != nil {
 		panic(errors.Wrap(err, "dbConnection"))
 	}
-	//err = db.Use(dbresolver.Register(dbresolver.Config{}).
-	//	SetMaxIdleConns(100).
-	//	SetMaxOpenConns(1000).
-	//	SetConnMaxIdleTime(time.Hour).
-	//	SetConnMaxLifetime(10 * time.Hour),
-	//)
-	//if err != nil {
-	//	panic(errors.Wrap(err, "dbConnection"))
-	//}
 	db = gormDb
 }
