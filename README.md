@@ -1,32 +1,145 @@
-# 백엔드
+# API REFERENCE
 
-## 주요기능
+- 처리결과는 http상태코드로 반환
+- 세부내용은 message로 제공
+- url: https://capston-blockapp.greenflamingo.dev:10321
 
-- 회원가입
-  - 구글로그인을 통한 회원가입
-    - 정보
-      - 지갑
-      - 팬아트 제작자
-    - 스트리머 여부를 확인
-      - 가입자가 직접 선택
-        - 만약 스트리머면 인증절차 수행
-- 로그인
-    - 1초에 최대 3회 이상 인증시 3분간 ip밴 수행
+## GET /owner/google
 
-- 스트리머 인증 
-  - 유튜브 api를 이용해 해당 채널이 존재하는지 확인
-  - 스트리머 인증 조건(유튜브 수익창출 허락 기준 따름)
-  - [스트리머 인증 조건](https://developers.google.com/youtube/v3/docs/channels?hl=ko)
-    1. 가입 후 3개월 이상
-    2. 구독자 최소 1000명 이상
-    3. 만18세 이상
-  - 스트리머 인증 완료시 해당 스트리머에 대한 스마트 컨트랙 제작
+- 로그인 페이지로 리다이렉팅
 
-- 2차 창작자의 NFT민팅
-    - 원하는 스트리머를 선택
-    - 팬아트 민팅 허용 요청
-      - 그림
-      - 가격
-    - 그림에 대한 유사도 검사 수행
-    - 유사도 검사를 통과하면 스트리머 컨트랙에 민팅 요청
-    - 민팅완료된 주소를 2차창작자에게 반환
+## GET /owner/google/callback
+
+- oauth callback
+
+### Response
+
+```json
+{
+  "access_token": "...."
+}
+```
+
+## PUT /owner/youtuber
+
+- 유튜브 채널 검증 및 주소등록
+- 등록이 통과될 시 블록체인에 contract생성
+  - contract처리 결과는 제공하지 않는다
+- bearer token 필요
+
+### Request
+
+```json
+{
+  "address": "..."
+}
+```
+
+### Response
+
+```json
+{
+  "message": "success"
+}
+```
+
+## PUT /owner/youtuber/:id
+
+- contract URI
+- contract URI에 존재하는 id를 통해 값을 조회
+
+### Response
+
+```json
+{
+  "title":    "...",
+  "description": "...",
+  "image":       "...",
+  "url":         "..."
+}
+```
+
+## POST /partner/nft
+
+### Request
+
+- form data형식으로 다음의 정보를 입력
+  - image: 3mb미만의 jpg,jpeg,png파일 1개
+  - name: nft이름
+  - description: nft설명
+
+### Response
+
+```json
+{
+  "message": "success",
+  "id":      "..."
+}
+```
+
+## POST /partner/nft
+
+### Request
+
+- form data형식으로 다음의 정보를 입력
+  - image: 3mb미만의 jpg,jpeg,png파일 1개
+  - name: nft이름
+  - description: nft설명
+
+### Response
+
+```json
+{
+  "message": "success",
+  "id":      "..."
+}
+```
+
+## GET /partner/nft/:id
+
+- 등록할 때 반환된 id를 이용해 nft리소스를 조회
+- NFT URI기능
+
+### Response
+
+```json
+{
+  "name":        "...",
+  "description": "...",
+  "image":       "url"
+}
+```
+
+## GET /common/nickname/:address
+
+- 주소를 요청하면 닉네임을 반환
+
+### Response
+
+```json
+{
+  "message": "success",
+  "nickname": "..."
+}
+```
+
+## POST /common/nickname/
+
+- 닉네임 등록
+
+### Request
+
+```json
+{
+  "address": "...",
+  "nickname": "..."
+}
+```
+
+### Response
+
+```json
+{
+  "message": "success"
+}
+```
