@@ -78,9 +78,9 @@ func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *owner2.Re
 	if err != nil {
 		return nil, err
 	}
-	userDB := dao.Owner{Email: email}
+	userDB := dao.Original{Email: email}
 	result, err := userDB.Read()
-	userDB = dao.Owner{
+	userDB = dao.Original{
 		ID:           result.ID,
 		Email:        email,
 		AccessToken:  token.AccessToken,
@@ -121,7 +121,7 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 	if err != nil {
 		return nil, err
 	}
-	userDB := dao.Owner{ID: accessToken.UserID}
+	userDB := dao.Original{ID: accessToken.UserID}
 	result, err := userDB.Read()
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 }
 
 func (receiver *OwnerService) GetChannel(_ context.Context, req *owner2.ChannelRequest) (*owner2.ChannelResponse, error) {
-	userDB := dao.Owner{ID: req.Id}
+	userDB := dao.Original{ID: req.Id}
 	result, err := userDB.Read()
 	if err != nil {
 		return nil, err

@@ -5,11 +5,7 @@ import (
 )
 
 func (receiver *User) Migration() error {
-	db, err := dbConnection()
-	if err != nil {
-		return errors.Wrap(err, "Migration")
-	}
-	err = db.Migrator().AutoMigrate(receiver)
+	err := db.Migrator().AutoMigrate(receiver)
 	if err != nil {
 		return err
 	}
@@ -17,10 +13,6 @@ func (receiver *User) Migration() error {
 }
 
 func (receiver *User) Load() error {
-	db, err := dbConnection()
-	if err != nil {
-		return nil
-	}
 	if receiver.Address == "" && receiver.Nickname == "" {
 		return errors.New("invalidate param")
 	}
@@ -28,21 +20,39 @@ func (receiver *User) Load() error {
 }
 
 func (receiver *User) Save() error {
-	db, err := dbConnection()
-	if err != nil {
-		return errors.Wrap(err, "User.Save")
-	}
 	return db.Create(receiver).Error
 }
 
 func (receiver *User) Read() error {
-	db, err := dbConnection()
-	if err != nil {
-		return errors.Wrap(err, "User.Read")
+	if receiver.Address != "" {
+		if receiver.Nickname != "" {
+			return errors.Wrap(receiver.readByAll(), "readByAll")
+		}
+		return errors.Wrap(receiver.readByAddr(), "readByAddr")
+	} else if receiver.Nickname != "" {
+		return errors.Wrap(receiver.readByNickname(), "readByNickname")
 	}
-	err = db.First(receiver).Error
+	err := db.First(receiver).Error
 	if err != nil {
 		return errors.Wrap(err, "User.Read")
 	}
 	return nil
+}
+
+func (receiver *User) readByAddr() error {
+	receiver.Nickname = ""
+	return db.First(receiver).Error
+}
+
+func (receiver *User) readByNickname() error {
+	return db.First(receiver, "nickname=?", receiver.Nickname).Error
+}
+func (receiver *User) readByAll() error {
+	address := receiver.Address
+	nickname := receiver.Nickname
+	receiver.Nickname = ""
+	receiver.Address = ""
+	return db.First(receiver, "nickname=? OR address=?",
+		nickname,
+		address).Error
 }

@@ -8,6 +8,18 @@ service Owner{
   rpc GoogleCallBack(RegisterRequest) returns(RegisterResponse){};
   rpc SaveAddress(AddressRequest) returns(AddressResponse){};
   rpc GetChannel(ChannelRequest) returns(ChannelResponse){};
+  rpc SetAnnoymousUser(NicknameRequest) returns(NicknameResponse){};
+  rpc GetAnnoymousUser(NicknameRequest) returns(NicknameResponse){};
+}
+
+message NicknameRequest{
+  string address=1;
+  string nickname=2;
+}
+
+message NicknameResponse{
+  OwnerStatus status=1;
+  string nickname=2;
 }
 
 message LoginRequest{
@@ -45,4 +57,9 @@ message ChannelResponse{
   string image=3;
   string url=4;
   bool isEmpty=5;
+}
+
+message OwnerStatus{
+  uint32 code=1;
+  string message=2;
 }

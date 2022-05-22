@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Owner struct {
+type Original struct {
 	ID               string `gorm:"primaryKey'"`
 	Email            string `gorm:"not_null"`
 	IsAuthedStreamer bool   `gorm:"not_null"`
@@ -32,7 +32,7 @@ type User struct {
 }
 
 func init() {
-	owner := Owner{}
+	owner := Original{}
 	user := User{}
 	err := owner.Migration()
 	if err != nil {

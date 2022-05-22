@@ -46,10 +46,10 @@ func dbConnection() *gorm.DB {
 }
 
 func TestCreateUser(t *testing.T) {
-	mock := owner.Owner{
+	mock := owner.Original{
 		Email: "test@test.com",
 	}
-	userDB := dao.Owner{
+	userDB := dao.Original{
 		Email: mock.Email,
 	}
 	defer func() {
@@ -64,16 +64,16 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestMigration(t *testing.T) {
-	temp1 := dao.Owner{}
+	temp1 := dao.Original{}
 	temp2 := dao.User{}
 	err := temp1.Migration()
-	require.Nil(t, err, "Owner 마이그레이션", err)
+	require.Nil(t, err, "Original 마이그레이션", err)
 	err = temp2.Migration()
-	require.Nil(t, err, "Owner 마이그레이션", err)
+	require.Nil(t, err, "Original 마이그레이션", err)
 }
 
 func TestAccessToken(t *testing.T) {
-	userDB := dao.Owner{
+	userDB := dao.Original{
 		Email: "test@test.com",
 	}
 	defer func() {

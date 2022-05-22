@@ -45,14 +45,14 @@ func (r *AccessToken) validate(tokenString string) error {
 	_, err := jwt.ParseWithClaims(tokenString, r, func(token *jwt.Token) (interface{}, error) {
 		// 1. 해싱알고리즘
 		if tokenMethod, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || tokenMethod != jwt.SigningMethodHS256 {
-			return nil, errors.Wrap(ErrValidateToken, "잘못된 알고리즘")
+			return nil, errors.Wrap(errors.New("invalidate token"), "잘못된 알고리즘")
 		}
 		// 2. standard기준 확인(exp,iat)
 		if err := r.Valid(); err != nil {
 			return nil, errors.Wrap(err, "토큰 유효기간 혹은 생성시간")
 		}
 		// 3. db의 데이터와 일치하는지확인
-		user := dao.Owner{
+		user := dao.Original{
 			ID: r.UserID,
 		}
 		if _, err := user.Read(); err != nil {

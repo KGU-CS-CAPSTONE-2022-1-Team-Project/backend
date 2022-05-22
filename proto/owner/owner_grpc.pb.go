@@ -26,6 +26,8 @@ type OwnerClient interface {
 	GoogleCallBack(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	SaveAddress(ctx context.Context, in *AddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
 	GetChannel(ctx context.Context, in *ChannelRequest, opts ...grpc.CallOption) (*ChannelResponse, error)
+	SetAnnoymousUser(ctx context.Context, in *NicknameRequest, opts ...grpc.CallOption) (*NicknameResponse, error)
+	GetAnnoymousUser(ctx context.Context, in *NicknameRequest, opts ...grpc.CallOption) (*NicknameResponse, error)
 }
 
 type ownerClient struct {
@@ -72,6 +74,24 @@ func (c *ownerClient) GetChannel(ctx context.Context, in *ChannelRequest, opts .
 	return out, nil
 }
 
+func (c *ownerClient) SetAnnoymousUser(ctx context.Context, in *NicknameRequest, opts ...grpc.CallOption) (*NicknameResponse, error) {
+	out := new(NicknameResponse)
+	err := c.cc.Invoke(ctx, "/Owner/SetAnnoymousUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ownerClient) GetAnnoymousUser(ctx context.Context, in *NicknameRequest, opts ...grpc.CallOption) (*NicknameResponse, error) {
+	out := new(NicknameResponse)
+	err := c.cc.Invoke(ctx, "/Owner/GetAnnoymousUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OwnerServer is the server API for Owner service.
 // All implementations must embed UnimplementedOwnerServer
 // for forward compatibility
@@ -80,6 +100,8 @@ type OwnerServer interface {
 	GoogleCallBack(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	SaveAddress(context.Context, *AddressRequest) (*AddressResponse, error)
 	GetChannel(context.Context, *ChannelRequest) (*ChannelResponse, error)
+	SetAnnoymousUser(context.Context, *NicknameRequest) (*NicknameResponse, error)
+	GetAnnoymousUser(context.Context, *NicknameRequest) (*NicknameResponse, error)
 	mustEmbedUnimplementedOwnerServer()
 }
 
@@ -98,6 +120,12 @@ func (UnimplementedOwnerServer) SaveAddress(context.Context, *AddressRequest) (*
 }
 func (UnimplementedOwnerServer) GetChannel(context.Context, *ChannelRequest) (*ChannelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetChannel not implemented")
+}
+func (UnimplementedOwnerServer) SetAnnoymousUser(context.Context, *NicknameRequest) (*NicknameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetAnnoymousUser not implemented")
+}
+func (UnimplementedOwnerServer) GetAnnoymousUser(context.Context, *NicknameRequest) (*NicknameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAnnoymousUser not implemented")
 }
 func (UnimplementedOwnerServer) mustEmbedUnimplementedOwnerServer() {}
 
@@ -184,6 +212,42 @@ func _Owner_GetChannel_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Owner_SetAnnoymousUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NicknameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OwnerServer).SetAnnoymousUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Owner/SetAnnoymousUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OwnerServer).SetAnnoymousUser(ctx, req.(*NicknameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Owner_GetAnnoymousUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NicknameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OwnerServer).GetAnnoymousUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Owner/GetAnnoymousUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OwnerServer).GetAnnoymousUser(ctx, req.(*NicknameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Owner_ServiceDesc is the grpc.ServiceDesc for Owner service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +270,14 @@ var Owner_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChannel",
 			Handler:    _Owner_GetChannel_Handler,
+		},
+		{
+			MethodName: "SetAnnoymousUser",
+			Handler:    _Owner_SetAnnoymousUser_Handler,
+		},
+		{
+			MethodName: "GetAnnoymousUser",
+			Handler:    _Owner_GetAnnoymousUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

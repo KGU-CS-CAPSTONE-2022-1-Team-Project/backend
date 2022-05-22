@@ -3,12 +3,15 @@ package dao
 import (
 	"backend/tool"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var dsn string
+
+var db *gorm.DB
 
 func init() {
 	if dsn == "" {
@@ -17,8 +20,18 @@ func init() {
 		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 			config["user"], config["password"], config["host"], config["port"], config["main_db"])
 	}
-}
-
-func dbConnection() (*gorm.DB, error) {
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	gormDb, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic(errors.Wrap(err, "dbConnection"))
+	}
+	//err = db.Use(dbresolver.Register(dbresolver.Config{}).
+	//	SetMaxIdleConns(100).
+	//	SetMaxOpenConns(1000).
+	//	SetConnMaxIdleTime(time.Hour).
+	//	SetConnMaxLifetime(10 * time.Hour),
+	//)
+	//if err != nil {
+	//	panic(errors.Wrap(err, "dbConnection"))
+	//}
+	db = gormDb
 }
