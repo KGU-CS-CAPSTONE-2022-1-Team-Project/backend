@@ -2,13 +2,25 @@ package google
 
 import (
 	"backend/infrastructure/owner/dao"
+	"backend/internal/owner/youtuber"
+	"backend/tool"
 	"context"
 	"errors"
+	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
 	"time"
 )
+
+var whiteList []string
+
+func init() {
+	if len(whiteList) == 0 {
+		tool.ReadConfig("./configs/owner", "client_secret", "json")
+	}
+	whiteList = viper.GetStringSlice("white_list")
+}
 
 func GetYoutubeChannel(user *dao.Original) (*youtube.Channel, error) {
 	googleToken := oauth2.Token{
@@ -27,12 +39,21 @@ func GetYoutubeChannel(user *dao.Original) (*youtube.Channel, error) {
 		[]string{"auditDetails", "statistics", "snippet"},
 	).Mine(true).Do()
 	if len(result.Items) != 1 {
-		return nil, errors.New("Not Found")
+		return nil, errors.New("not found")
 	}
-	//err = youtuber.ValidateChannel(result.Items[0])
-	//if err != nil {
-	//	return nil, err
-	//}
+	isWhiteList := false
+	for _, white := range whiteList {
+		if user.Email == white {
+			isWhiteList = true
+			break
+		}
+	}
+	if !isWhiteList {
+		err = youtuber.ValidateChannel(result.Items[0])
+		if err != nil {
+			return nil, err
+		}
+	}
 	return result.Items[0], nil
 }
 

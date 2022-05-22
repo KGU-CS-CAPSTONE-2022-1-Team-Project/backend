@@ -18,7 +18,7 @@ import (
 var Config *oauth2.Config
 
 func init() {
-	if !viper.IsSet("web") {
+	if Config == nil {
 		tool.ReadConfig("./configs/owner", "client_secret", "json")
 	}
 	infoAuth := viper.GetStringMapStringSlice("web")

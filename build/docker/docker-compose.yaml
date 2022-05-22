@@ -1,13 +1,6 @@
 version: '3.7'
 
 services:
-  api-gateway:
-    container_name: api-gateway
-    build:
-      context: ../..
-      dockerfile: build/docker/gateway.DOCKERFILE
-    ports:
-      - "10321:10321"
   server-owner:
     container_name: server-user
     build:
@@ -15,8 +8,17 @@ services:
       dockerfile: build/docker/owner-server.DOCKERFILE
     ports:
       - "8000:8000"
+
+  server-partner:
+    container_name: server-partner
+    build:
+      context: ../..
+      dockerfile: build/docker/partner-server.DOCKERFILE
+    ports:
+      - "15663:15663"
+
   db-owner:
-    container_name: db-user
+    container_name: db-owner
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
     restart: on-failure
@@ -27,7 +29,7 @@ services:
       MYSQL_DATABASE: auth
       MYSQL_TCP_PORT: 27777
     ports:
-      - "15345:27777"
+      - "27777:27777"
     secrets:
       - db_owner_root_secert
       - db_owner_user_secert
@@ -40,9 +42,9 @@ services:
     env_file:
       - ../../configs/docker_secrets/mongodb.env
     volumes:
-      - ../../data:/data/db
+      - /c/tmp/data:/data/db
     ports:
-      - "50000:23465"
+      - "23465:23465"
     secrets:
       - mongodb_passwd
 
