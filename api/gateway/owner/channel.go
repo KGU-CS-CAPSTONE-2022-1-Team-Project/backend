@@ -25,22 +25,25 @@ func GetChannel(ctx *gin.Context) {
 	defer cancelFunc()
 	req := pb.ChannelRequest{Id: id}
 	res, err := client.Owner().GetChannel(timeout, &req)
+	switch res.Status.Code {
+	case http.StatusNotFound:
+		ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+			"message": "not exists channel",
+		})
+	case http.StatusOK:
+		ctx.JSON(http.StatusOK, gin.H{
+			"title":                   res.Title,
+			"description":             res.Description,
+			"image":                   res.Image,
+			"external_link":           res.Url,
+			"seller_fee_basis_points": 1000,
+			"fee_recipient":           res.Address,
+		})
+	}
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"message": "내부서버 오류",
+			"message": "internal server error",
 		})
 		return
 	}
-	if res.IsEmpty {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
-			"message": "존재하지 않는 채널",
-		})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"title":       res.Title,
-		"description": res.Description,
-		"image":       res.Image,
-		"url":         res.Url,
-	})
 }
