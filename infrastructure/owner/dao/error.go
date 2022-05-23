@@ -6,5 +6,5 @@ import (
 )
 
 func IsEmpty(err error) bool {
-	return errors.Is(err, gorm.ErrRecordNotFound)
+	return errors.Is(errors.Cause(err), gorm.ErrRecordNotFound)
 }
