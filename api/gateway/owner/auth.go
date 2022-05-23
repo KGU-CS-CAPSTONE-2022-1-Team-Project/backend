@@ -3,12 +3,23 @@ package owner
 import (
 	"backend/api/gateway/client"
 	pb "backend/proto/owner"
+	"backend/tool"
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"net/http"
 	"strings"
 	"time"
 )
+
+var redirectUri string
+
+func init() {
+	if redirectUri == "" {
+		tool.ReadConfig("./configs/gateway", "client_secret", "json")
+		redirectUri = viper.GetString("redirect_uri")
+	}
+}
 
 func Redirecting(ctx *gin.Context) {
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
@@ -34,9 +45,7 @@ func RegisterUser(ctx *gin.Context) {
 		})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"access_token": res.AccessToken,
-	})
+	ctx.Redirect(http.StatusTemporaryRedirect, redirectUri+res.AccessToken)
 }
 
 func AuthYoutuber(ctx *gin.Context) {

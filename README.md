@@ -11,6 +11,7 @@
 ## GET /owner/google/callback
 
 - oauth callback
+- redirecting으로 값을 전달
 
 ### Response
 
@@ -55,7 +56,9 @@
   "title":    "...",
   "description": "...",
   "image":       "...",
-  "url":         "..."
+  "external_url":         "...",
+  "seller_fee_basis_points": 1000,
+  "fee_recipient":           "..."
 }
 ```
 

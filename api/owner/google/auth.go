@@ -20,14 +20,14 @@ var Config *oauth2.Config
 func init() {
 	if Config == nil {
 		tool.ReadConfig("./configs/owner", "client_secret", "json")
-	}
-	infoAuth := viper.GetStringMapStringSlice("web")
-	Config = &oauth2.Config{
-		ClientID:     infoAuth["client_id"][0],
-		ClientSecret: infoAuth["client_secret"][0],
-		RedirectURL:  infoAuth["redirect_uris"][0],
-		Scopes:       infoAuth["scopes"],
-		Endpoint:     google.Endpoint,
+		infoAuth := viper.GetStringMapStringSlice("web")
+		Config = &oauth2.Config{
+			ClientID:     infoAuth["client_id"][0],
+			ClientSecret: infoAuth["client_secret"][0],
+			RedirectURL:  infoAuth["redirect_uris"][0],
+			Scopes:       infoAuth["scopes"],
+			Endpoint:     google.Endpoint,
+		}
 	}
 }
 
