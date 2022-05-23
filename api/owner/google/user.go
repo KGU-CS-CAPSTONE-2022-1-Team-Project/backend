@@ -4,6 +4,7 @@ import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
 	pb "backend/proto/owner"
+	"backend/tool"
 	"context"
 	"encoding/hex"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 )
 
 func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.NicknameRequest) (*pb.NicknameResponse, error) {
+	tool.Logger().Info("set nickname", "address", req.Address)
 	user := owner.User{
 		Address:  req.Address,
 		Nickname: req.Nickname,
@@ -57,10 +59,12 @@ func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.Nickna
 	}, nil
 }
 
-func (receiver OwnerService) GetAnnoymousUser(_ context.Context, req *pb.NicknameRequest) (*pb.NicknameResponse, error) {
+func (receiver *OwnerService) GetAnnoymousUser(_ context.Context, req *pb.NicknameRequest) (*pb.NicknameResponse, error) {
+	tool.Logger().Info("get nickname", "address", req.Address)
 	addr := strings.TrimPrefix(req.Address, "0x")
 	byteArray, err := hex.DecodeString(addr)
 	if err != nil || len(byteArray) != 20 {
+		tool.Logger().Error("not address", err, "address", req.Address)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code:    http.StatusBadRequest,
@@ -74,6 +78,7 @@ func (receiver OwnerService) GetAnnoymousUser(_ context.Context, req *pb.Nicknam
 	if dao.IsEmpty(err) {
 		return FindChannelName(req.Address)
 	} else if err != nil {
+		tool.Logger().Warning("fail read orignal db", err, "address", req.Address)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code:    http.StatusInternalServerError,
@@ -95,12 +100,14 @@ func FindChannelName(address string) (*pb.NicknameResponse, error) {
 	}
 	result, err := channeOwner.Read()
 	if dao.IsEmpty(err) {
+		tool.Logger().Info("empty address", "address", address)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code: http.StatusNotFound,
 			},
 		}, nil
 	} else if err != nil {
+		tool.Logger().Warning("fail read user db", err, "address", address)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code: http.StatusInternalServerError,

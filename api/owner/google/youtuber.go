@@ -51,9 +51,11 @@ func GetYoutubeChannel(user *dao.Original) (*youtube.Channel, error) {
 	if !isWhiteList {
 		err = youtuber.ValidateChannel(result.Items[0])
 		if err != nil {
+			tool.Logger().Warning("invalidate channel", err, "uid", user.ID)
 			return nil, err
 		}
 	}
+	tool.Logger().Info("validate channel", "uid", user.ID)
 	return result.Items[0], nil
 }
 

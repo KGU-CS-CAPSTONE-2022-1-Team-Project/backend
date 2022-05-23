@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"log"
 	"net"
 )
 
@@ -21,6 +20,11 @@ func init() {
 }
 
 func main() {
+	defer func() {
+		r := recover()
+		tool.Logger().Error("panic", r.(error))
+		main()
+	}()
 	listen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		panic(err)
@@ -28,7 +32,8 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterPartnerServiceServer(s, &partner.PartnerService{})
 	reflection.Register(s)
+	tool.Logger().Info("start GRPC partner server")
 	if err := s.Serve(listen); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		tool.Logger().Error("failed to serve", err, "port", port)
 	}
 }
