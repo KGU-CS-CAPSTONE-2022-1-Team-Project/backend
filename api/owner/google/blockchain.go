@@ -2,10 +2,9 @@ package google
 
 import (
 	"backend/internal/owner/blockchain"
+	"backend/tool"
 	"context"
 	"github.com/gochain/web3"
-	"github.com/pkg/errors"
-	"log"
 	"time"
 )
 
@@ -15,23 +14,23 @@ func RegisterContract(address string, userId string) {
 	pureClient, err := web3.Dial("https://api.baobab.klaytn.net:8651")
 	defer pureClient.Close()
 	if err != nil {
-		log.Println("fail create pure client", err)
+		tool.Logger().Warning("fail create web3 client", err)
 		return
 	}
 	client := blockchain.WrappingClient{Client: pureClient}
 	hash, err := client.DeployNFTMaker(address, userId)
 	if err != nil {
-		log.Println(errors.Cause(err))
+		tool.Logger().Warning("fail DeployNFTMaker", err, "address", address, "uid", userId)
 		return
 	}
 	contract, err := client.WaitDeploy(hash, timeout)
 	if err != nil {
-		log.Println(errors.Cause(err))
+		tool.Logger().Warning("fail DeployNFTMaker", err, "ContractHash", hash.Hex())
 		return
 	}
 	err = client.RegisterDeployedNFTMaker(address, contract)
 	if err != nil {
-		log.Println(errors.Cause(err))
+		tool.Logger().Warning("fail DeployNFTMaker", err, "ContractHash", contract.Hex())
 		return
 	}
 }

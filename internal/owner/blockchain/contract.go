@@ -1,11 +1,11 @@
 package blockchain
 
 import (
+	"backend/tool"
 	"context"
 	"github.com/gochain/gochain/v3/common"
 	"github.com/gochain/web3"
 	"github.com/pkg/errors"
-	"log"
 	"math/big"
 	"time"
 )
@@ -54,7 +54,7 @@ func (receiver *WrappingClient) RegisterDeployedNFTMaker(address string, contrac
 		receiver, abies["connection"], address, privateKey,
 		abies["connection"].Methods["register"].Name, big.NewInt(0), gasPrice, 8_500_000,
 		address, contract)
-	log.Println("registered:", register.Hash.Hex())
+	tool.Logger().Info("registered nft maker", "hash", register.Hash.Hex())
 	if err != nil {
 		return errors.Wrap(err, "Maker 등록 실패")
 	}

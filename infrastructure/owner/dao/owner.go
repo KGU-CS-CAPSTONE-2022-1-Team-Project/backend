@@ -29,8 +29,8 @@ func (receiver *Original) Create() error {
 }
 
 func (receiver *Original) Save() error {
-	return db.Model(&Original{ID: receiver.ID}).
-		Updates(&receiver).Error
+	return errors.Wrap(db.Model(&Original{ID: receiver.ID}).
+		Updates(&receiver).Error, "orignal svae")
 }
 
 func (receiver *Original) Read() (*Original, error) {
@@ -48,17 +48,17 @@ func (receiver *Original) Read() (*Original, error) {
 
 func (receiver *Original) readByUserID(conn *gorm.DB) (*Original, error) {
 	result := &Original{}
-	return result, conn.First(&result, "id", receiver.ID).Error
+	return result, errors.Wrap(conn.First(&result, "id", receiver.ID).Error, "readByUserID")
 }
 
 func (receiver *Original) readByEmail(conn *gorm.DB) (*Original, error) {
 	result := &Original{}
-	return result, conn.First(&result, "email=?",
-		receiver.Email).Error
+	return result, errors.Wrap(conn.First(&result, "email=?",
+		receiver.Email).Error, "readByEmail")
 }
 
 func (receiver *Original) readByChannelName(conn *gorm.DB) (*Original, error) {
 	result := &Original{}
-	return result, conn.First(&result, "address=?",
-		receiver.Email).Error
+	return result, errors.Wrap(conn.First(&result, "address=?",
+		receiver.Address).Error, "readByChannelName")
 }

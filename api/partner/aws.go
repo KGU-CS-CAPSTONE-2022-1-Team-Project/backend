@@ -1,6 +1,7 @@
 package partner
 
 import (
+	"backend/tool"
 	"bytes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -24,7 +25,6 @@ func init() {
 		Endpoint:    aws.String("https://kr.object.ncloudstorage.com"),
 		Credentials: credentials.NewSharedCredentials("./configs/partner/ncp/credentials", "default"),
 	})))
-
 }
 
 func UploadObject(chunk []byte) (string, error) {
@@ -37,6 +37,7 @@ func UploadObject(chunk []byte) (string, error) {
 		ACL:         aws.String(s3.BucketCannedACLPublicRead),
 		ContentType: aws.String(http.DetectContentType(chunk)),
 	})
+	tool.Logger().Info("upload image file", "fileid", fileId)
 
 	if err != nil {
 		return "", errors.Wrap(err, "Upload Object")

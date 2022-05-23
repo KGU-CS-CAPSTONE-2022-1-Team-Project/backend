@@ -3,7 +3,7 @@ package google
 import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
-	owner2 "backend/proto/owner"
+	pb "backend/proto/owner"
 	"backend/tool"
 	"context"
 	"github.com/pkg/errors"
@@ -31,10 +31,6 @@ func init() {
 	}
 }
 
-type OwnerService struct {
-	owner2.UnimplementedOwnerServer
-}
-
 func (receiver *OwnerService) isValidate(tokenString string) error {
 	accessToken := owner.AccessToken{}
 	err := owner.TokenValidate(&accessToken, tokenString)
@@ -59,17 +55,19 @@ func (receiver *OwnerService) getGoogleEmail(ctx context.Context, token *oauth2.
 	return userInfo.Email, err
 }
 
-func (receiver *OwnerService) Google(_ context.Context, req *owner2.LoginRequest) (*owner2.LoginResponse, error) {
+func (receiver *OwnerService) Google(_ context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	tool.Logger().Info("Request GoogleAuth")
 	url := Config.AuthCodeURL(
 		req.Ip,
 		oauth2.AccessTypeOffline,
 	)
-	return &owner2.LoginResponse{
+	return &pb.LoginResponse{
 		AuthUrl: url,
 	}, nil
 }
 
-func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *owner2.RegisterRequest) (*owner2.RegisterResponse, error) {
+func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	tool.Logger().Info("Authed GoogleAuth")
 	token, err := receiver.exchangeGoogle(ctx, req.Code)
 	if err != nil {
 		return nil, err
@@ -106,12 +104,13 @@ func (receiver *OwnerService) GoogleCallBack(ctx context.Context, req *owner2.Re
 	if err != nil {
 		return nil, err
 	}
-	return &owner2.RegisterResponse{
+	return &pb.RegisterResponse{
 		AccessToken: tokenString,
 	}, nil
 }
 
-func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.AddressRequest) (*owner2.AddressResponse, error) {
+func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequest) (*pb.AddressResponse, error) {
+	tool.Logger().Info("SaveAddress")
 	err := receiver.isValidate(req.AccessToken)
 	if err != nil {
 		return nil, err
@@ -119,15 +118,18 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 	accessToken := owner.AccessToken{}
 	err = owner.GetAuthInfo(&accessToken, req.AccessToken)
 	if err != nil {
+		tool.Logger().Warning("invalidate token", err)
 		return nil, err
 	}
 	userDB := dao.Original{ID: accessToken.UserID}
 	result, err := userDB.Read()
 	if err != nil {
+		tool.Logger().Warning("fail read db by SaveAddress", err)
 		return nil, err
 	}
 	channel, err := GetYoutubeChannel(result)
 	if err != nil {
+		tool.Logger().Warning("fail get youtube channel by SaveAddress", err)
 		return nil, err
 	}
 	result.Address = req.Address
@@ -137,18 +139,19 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *owner2.Address
 		return nil, err
 	}
 	go RegisterContract(req.Address, userDB.ID)
-	return &owner2.AddressResponse{
+	return &pb.AddressResponse{
 		IsValidate: true,
 	}, nil
 }
 
-func (receiver *OwnerService) GetChannel(_ context.Context, req *owner2.ChannelRequest) (*owner2.ChannelResponse, error) {
+func (receiver *OwnerService) GetChannel(_ context.Context, req *pb.ChannelRequest) (*pb.ChannelResponse, error) {
 	userDB := dao.Original{ID: req.Id}
 	result, err := userDB.Read()
 	if err != nil {
+		tool.Logger().Warning("fail read db by GetChannel", err)
 		return nil, err
 	}
-	return &owner2.ChannelResponse{
+	return &pb.ChannelResponse{
 		Title:       result.Channel.Name,
 		Description: result.Channel.Description,
 		Image:       result.Channel.Image,
