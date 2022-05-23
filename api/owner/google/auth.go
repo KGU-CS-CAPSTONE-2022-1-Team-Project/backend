@@ -143,18 +143,3 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequ
 		IsValidate: true,
 	}, nil
 }
-
-func (receiver *OwnerService) GetChannel(_ context.Context, req *pb.ChannelRequest) (*pb.ChannelResponse, error) {
-	userDB := dao.Original{ID: req.Id}
-	result, err := userDB.Read()
-	if err != nil {
-		tool.Logger().Warning("fail read db by GetChannel", err)
-		return nil, err
-	}
-	return &pb.ChannelResponse{
-		Title:       result.Channel.Name,
-		Description: result.Channel.Description,
-		Image:       result.Channel.Image,
-		Url:         result.Channel.Url,
-	}, nil
-}

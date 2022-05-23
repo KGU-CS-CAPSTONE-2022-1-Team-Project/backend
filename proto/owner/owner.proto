@@ -52,11 +52,12 @@ message ChannelRequest{
 }
 
 message ChannelResponse{
-  string title=1;
-  string description=2;
-  string image=3;
-  string url=4;
-  bool isEmpty=5;
+  OwnerStatus status=1;
+  string title=2;
+  string description=3;
+  string image=4;
+  string url=5;
+  string address=6;
 }
 
 message OwnerStatus{
