@@ -38,9 +38,10 @@ func GetChannel(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{
-		"title":       res.Title,
-		"description": res.Description,
-		"image":       res.Image,
-		"url":         res.Url,
+		"title":                   res.Title,
+		"description":             res.Description,
+		"image":                   res.Image,
+		"external_link":           res.Url,
+		"saller_fee_basis_points": 1000,
 	})
 }
