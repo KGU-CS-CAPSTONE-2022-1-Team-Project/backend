@@ -3,6 +3,7 @@ package google
 import (
 	"backend/infrastructure/owner/dao"
 	"backend/internal/owner"
+	"backend/internal/owner/blockchain"
 	pb "backend/proto/owner"
 	"backend/tool"
 	"context"
@@ -12,13 +13,22 @@ import (
 )
 
 func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.NicknameRequest) (*pb.NicknameResponse, error) {
-	tool.Logger().Info("set nickname", "address", req.Address)
+	addr, err := blockchain.UnsignedAddress(req.Address)
+	if err != nil {
+		tool.Logger().Error("fail unsigned", err, "request signed addr", req.Address)
+		return &pb.NicknameResponse{Status: &pb.OwnerStatus{
+			Code:    http.StatusInternalServerError,
+			Message: "fail unsigned",
+		}}, nil
+	}
+	tool.Logger().Info("set nickname", "address", addr)
 	user := owner.User{
-		Address:  req.Address,
+		Address:  addr,
 		Nickname: req.Nickname,
 	}
-	err := owner.Validate(&user)
+	err = owner.Validate(&user)
 	if err != nil {
+		tool.Logger().Warning("invalidate addr", err, "address", addr, "nickname", req.Nickname)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code: http.StatusBadRequest,
@@ -28,8 +38,10 @@ func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.Nickna
 	userDB := owner.User2UserDB(user)
 	err = userDB.Read()
 	if dao.IsEmpty(err) {
+		userDB = owner.User2UserDB(user)
 		err = userDB.Save()
 		if err != nil {
+			tool.Logger().Warning("fail save addr", err, "address", addr, "nickname", req.Nickname)
 			return &pb.NicknameResponse{
 				Status: &pb.OwnerStatus{
 					Code:    http.StatusInternalServerError,
@@ -44,6 +56,7 @@ func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.Nickna
 			},
 		}, nil
 	} else if err != nil {
+		tool.Logger().Warning("fail search addr or nickname", err, "address", addr, "nickname", req.Nickname)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
 				Code:    http.StatusInternalServerError,
@@ -51,6 +64,8 @@ func (receiver *OwnerService) SetAnnoymousUser(_ context.Context, req *pb.Nickna
 			},
 		}, nil
 	}
+	tool.Logger().Warning("found addr", err, "address",
+		addr, "searched addr", userDB.Address, "nickname", req.Nickname, "searched addr", userDB.Nickname)
 	return &pb.NicknameResponse{
 		Status: &pb.OwnerStatus{
 			Code:    http.StatusForbidden,

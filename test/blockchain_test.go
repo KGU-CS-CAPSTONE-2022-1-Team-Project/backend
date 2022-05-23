@@ -1,6 +1,7 @@
 package test
 
 import (
+	"backend/internal/owner/blockchain"
 	"context"
 	"encoding/json"
 	"github.com/gochain/gochain/v3/common"
@@ -100,4 +101,11 @@ func TestCallRegister(t *testing.T) {
 	)
 	require.Nil(t, err, "function call 에러발생", err)
 	t.Log(result.Hash.Hex())
+}
+
+func TestDecryptMsg(t *testing.T) {
+	cryptedMsg := "0x40bd50bb324b200f6aa0e2a32d25cd8e7f4a51bf0e9abda164fc70622dbc587a44b36e31682c999ec1a797ff93f4f113ef51c936276f8746b96624acf88e8ad71b"
+	decrypted, err := blockchain.UnsignedAddress(cryptedMsg)
+	assert.Nil(t, err, "decrypt에러 발생", err)
+	assert.Equal(t, "0xc71995b0a26d26dB152eBD3c3Df9e30564B593A8", decrypted)
 }
