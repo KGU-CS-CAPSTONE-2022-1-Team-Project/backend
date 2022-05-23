@@ -4,6 +4,7 @@ import (
 	"backend/api/gateway/owner"
 	"backend/api/gateway/partner"
 	"backend/tool"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -18,15 +19,26 @@ const (
 
 var port string
 
+var corsList []string
+
 func init() {
-	if !viper.IsSet("port") {
+	if port == "" {
 		tool.ReadConfig("./configs/gateway", "services", "yaml")
+		port = viper.GetStringMapString("gateway")["port"]
 	}
-	port = viper.GetStringMapString("gateway")["port"]
+	if corsList == nil {
+		tool.ReadConfig("./configs/gateway", "client_secret", "json")
+		corsList = viper.GetStringSlice("cors_list")
+	}
 }
 
 func main() {
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: corsList,
+		AllowMethods: []string{"PUT", "GET", "POST"},
+		AllowHeaders: []string{"Authorization", "Origin"},
+	}))
 	r.GET(GoogleAuth, owner.Redirecting)
 	r.GET(GoogleAuthCallback, owner.RegisterUser)
 	r.PUT(Youtuber, owner.AuthYoutuber)
