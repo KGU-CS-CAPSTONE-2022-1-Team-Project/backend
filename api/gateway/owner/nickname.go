@@ -30,7 +30,6 @@ func SetNickname(ctx *gin.Context) {
 		Nickname: holder.Nickname,
 	}
 	res, err := client.Owner().SetAnnoymousUser(timeout, &req)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"message": "internal server error",
