@@ -21,6 +21,11 @@ var port string
 
 var corsList []string
 
+const (
+	fullchain  = "/etc/letsencrypt/live/capston-blockapp.greenflamingo.dev/fullchain.pem"
+	privatekey = "/etc/letsencrypt/live/capston-blockapp.greenflamingo.dev/privkey.pem"
+)
+
 func init() {
 	if port == "" {
 		tool.ReadConfig("./configs/gateway", "services", "yaml")
@@ -47,7 +52,13 @@ func main() {
 	r.GET(Nft+"/:id", partner.GetNFTInfo)
 	r.POST(Nickname, owner.SetNickname)
 	r.GET(Nickname+"/:address", owner.GetNickname)
-	err := r.Run(":" + port)
+
+	var err error
+	if gin.Mode() == gin.ReleaseMode {
+		err = r.RunTLS(":"+port, fullchain, privatekey)
+	} else {
+		err = r.Run(":" + port)
+	}
 	if err != nil {
 		panic(err)
 	}
