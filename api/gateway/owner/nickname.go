@@ -41,6 +41,10 @@ func SetNickname(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"message": "wrong params",
 		})
+	case http.StatusNotFound:
+		ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+			"message": "not found",
+		})
 	case http.StatusOK:
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "success",

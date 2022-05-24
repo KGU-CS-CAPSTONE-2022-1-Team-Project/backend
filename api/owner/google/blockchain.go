@@ -9,8 +9,6 @@ import (
 )
 
 func RegisterContract(address string, userId string) {
-	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelFunc()
 	pureClient, err := web3.Dial("https://api.baobab.klaytn.net:8651")
 	defer pureClient.Close()
 	if err != nil {
@@ -23,6 +21,8 @@ func RegisterContract(address string, userId string) {
 		tool.Logger().Warning("fail DeployNFTMaker", err, "address", address, "uid", userId)
 		return
 	}
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancelFunc()
 	contract, err := client.WaitDeploy(hash, timeout)
 	if err != nil {
 		tool.Logger().Warning("fail DeployNFTMaker", err, "ContractHash", hash.Hex())
