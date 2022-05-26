@@ -20,11 +20,6 @@ func init() {
 }
 
 func main() {
-	defer func() {
-		r := recover()
-		tool.Logger().Error("panic", r.(error))
-		main()
-	}()
 	listen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		panic(err)

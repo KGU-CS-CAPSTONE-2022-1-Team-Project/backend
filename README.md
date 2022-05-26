@@ -13,12 +13,6 @@
 - oauth callback
 - redirecting으로 값을 전달
 
-### Response
-
-```json
-{
-  "access_token": "...."
-}
 ```
 
 ## PUT /owner/youtuber
@@ -129,6 +123,7 @@
 ## POST /common/nickname/
 
 - 닉네임 등록
+- klaytn의 message signing된 값을 전달받아 이를 복호화하여 저장
 
 ### Request
 

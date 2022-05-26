@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"net/http"
 )
 
 const (
@@ -41,8 +42,11 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: corsList,
-		AllowMethods: []string{"PUT", "GET", "POST"},
-		AllowHeaders: []string{"Authorization", "Origin"},
+		AllowMethods: []string{http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodOptions},
+		AllowHeaders: []string{"Origin", "content-type", "Authorization"},
 	}))
 	r.GET(GoogleAuth, owner.Redirecting)
 	r.GET(GoogleAuthCallback, owner.RegisterUser)
@@ -55,6 +59,7 @@ func main() {
 
 	var err error
 	if gin.Mode() == gin.ReleaseMode {
+		tool.Logger().Info("start gateway server", "port", port)
 		err = r.RunTLS(":"+port, fullchain, privatekey)
 	} else {
 		err = r.Run(":" + port)

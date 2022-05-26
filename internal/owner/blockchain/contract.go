@@ -51,7 +51,7 @@ func (receiver *WrappingClient) RegisterDeployedNFTMaker(address string, contrac
 	defer cancelFunc()
 	gasPrice, _ := receiver.GetGasPrice(timeout)
 	register, err := web3.CallTransactFunction(timeout,
-		receiver, abies["connection"], address, privateKey,
+		receiver, abies["connection"], connContractAddr, privateKey,
 		abies["connection"].Methods["register"].Name, big.NewInt(0), gasPrice, 8_500_000,
 		address, contract)
 	tool.Logger().Info("registered nft maker", "hash", register.Hash.Hex())

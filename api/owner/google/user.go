@@ -118,7 +118,8 @@ func FindChannelName(address string) (*pb.NicknameResponse, error) {
 		tool.Logger().Info("empty address", "address", address)
 		return &pb.NicknameResponse{
 			Status: &pb.OwnerStatus{
-				Code: http.StatusNotFound,
+				Code:    http.StatusNotFound,
+				Message: "not found",
 			},
 		}, nil
 	} else if err != nil {

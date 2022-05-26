@@ -3,6 +3,7 @@ version: '3.7'
 services:
   server-owner:
     container_name: server-user
+    restart: always
     build:
       context: ../..
       dockerfile: build/docker/owner-server.DOCKERFILE
@@ -11,6 +12,7 @@ services:
 
   server-partner:
     container_name: server-partner
+    restart: always
     build:
       context: ../..
       dockerfile: build/docker/partner-server.DOCKERFILE
@@ -21,7 +23,7 @@ services:
     container_name: db-owner
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
-    restart: on-failure
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_owner_root_secert
       MYSQL_USER: auth
@@ -37,7 +39,7 @@ services:
   db-partner:
     container_name: db-partner
     image: mongo:latest
-    restart: on-failure
+    restart: always
     command: mongod --port 23465
     env_file:
       - ../../configs/docker_secrets/mongodb.env
