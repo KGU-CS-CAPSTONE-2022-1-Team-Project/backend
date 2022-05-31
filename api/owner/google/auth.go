@@ -132,6 +132,7 @@ func (receiver *OwnerService) SaveAddress(_ context.Context, req *pb.AddressRequ
 		tool.Logger().Warning("fail get youtube channel by SaveAddress", err)
 		return nil, err
 	}
+	result.IsAuthedStreamer = true
 	result.Address = req.Address
 	SetChannel(result, channel)
 	err = result.Save()

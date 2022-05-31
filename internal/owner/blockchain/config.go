@@ -11,7 +11,7 @@ import (
 const (
 	name             = "BlockApp"
 	symbol           = "BA"
-	connContractAddr = "0x70833A8Db44Be18a80c9D5F698e952A5d93ED0ec"
+	connContractAddr = "0x09EDf29F4De5d652336FbFD886c8d008F173edf6"
 )
 
 var (
