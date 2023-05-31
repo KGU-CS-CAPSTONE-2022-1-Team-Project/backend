@@ -2,7 +2,6 @@
 
 - 처리결과는 http상태코드로 반환
 - 세부내용은 message로 제공
-- url: https://capston-blockapp.greenflamingo.dev:10321
 
 ## GET /owner/google
 
